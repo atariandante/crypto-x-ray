@@ -1,2 +1,13 @@
-// Settings page — detection toggle, API keys, theme
-// TODO: Implement in T-10
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Options } from "@/components/options/Options";
+import "@/index.css";
+
+const root = document.getElementById("root");
+if (root) {
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <Options />
+    </React.StrictMode>
+  );
+}
