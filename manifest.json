@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Crypto X-Ray",
+  "description": "Token intelligence companion — detect crypto tokens on any page and get instant tokenomics analysis",
+  "version": "0.1.0",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.ts"],
+      "css": [],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://api.coingecko.com/*",
+    "https://pro-api.coingecko.com/*",
+    "https://api.llama.fi/*",
+    "https://api.tokenomist.ai/*",
+    "https://api.tokenterminal.com/*",
+    "https://api.etherscan.io/*",
+    "https://api.basescan.org/*",
+    "https://api.arbiscan.io/*",
+    "https://api.polygonscan.com/*",
+    "https://api.bscscan.com/*",
+    "https://api.optimistic.etherscan.io/*",
+    "https://pro-api.solscan.io/*",
+    "https://api.helius.xyz/*",
+    "https://openapi.debank.com/*"
+  ]
+}
