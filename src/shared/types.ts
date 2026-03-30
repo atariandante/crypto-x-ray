@@ -67,13 +67,13 @@ export interface TokenProfile {
   // Supply
   supply: SupplyInfo;
 
-  // Unlocks (paid tier)
+  // Unlocks (DeFiLlama Pro — $300/mo)
   unlocks?: UnlockInfo;
 
-  // Allocation (paid tier)
+  // Allocation (DeFiLlama Pro — $300/mo)
   allocation?: AllocationInfo;
 
-  // Fundamentals (paid tier)
+  // Fundamentals (free: DeFiLlama + CoinGecko)
   fundamentals?: FundamentalsInfo;
 
   // Scoring
@@ -245,8 +245,7 @@ export interface UserSettings {
   theme: "light" | "dark" | "auto";
   alertLevel: "all" | "important_only" | "critical_only";
   apiKeys: {
-    tokenomist?: string;
-    tokenTerminal?: string;
+    defiLlamaPro?: string; // $300/mo — unlocks emission/allocation data
     etherscan?: string;
     solscan?: string;
     debank?: string;

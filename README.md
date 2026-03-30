@@ -31,21 +31,33 @@ When you browse Twitter/X, CoinGecko, Medium, Reddit, Discord web, or any site, 
 
 ## Data Sources
 
-- **CoinGecko API** — price, market cap, FDV, supply, categories
-- **Tokenomist.ai API** — unlock schedules, vesting, allocations
-- **DefiLlama API** — TVL, protocol revenue
-- **Token Terminal API** — fundamentals (revenue, fees, active users)
-- **Etherscan/Basescan/Arbiscan** — contract info, wallet balances
-- **Solscan/Helius** — Solana token and wallet data
-- **Debank API** — wallet portfolio breakdown
+| API | Role | Cost | Status |
+|-----|------|------|--------|
+| **CoinGecko** | Token identity, supply, market cap, FDV, categories | Free (10-50 req/min) | Implemented |
+| **DeFiLlama** | Prices, TVL, revenue, fees, DEX volumes | Free (~1000 req/min) | Implemented |
+| **DeFiLlama Pro** | Unlock schedules, allocation breakdowns, vesting | $300/mo | Future (premium tier) |
+| **Etherscan** | Contract verification, token info (EVM chains) | Free (5 req/sec) | Planned |
+| **Solscan** | Token metadata, holders (Solana) | Free (100 req/min) | Planned |
+| **Debank** | Wallet portfolio breakdown | Free/Paid | Planned |
+
+### Smart Routing Strategy
+
+Prices are routed through DeFiLlama (generous rate limits) to preserve CoinGecko budget for identity/supply data (only source). See [`docs/data-sources.md`](docs/data-sources.md) for full endpoint mapping.
+
+### Eliminated APIs
+
+- **Tokenomist** — 100% paid, no free tier. Replaced by DeFiLlama Pro for unlock/allocation data.
+- **Token Terminal** — Enterprise pricing only. Revenue/fees covered by DeFiLlama free tier.
 
 ## Tech Stack
 
-- **TypeScript** + **React** for UI
-- **Vite** for extension bundling
+- **TypeScript** + **React 18** for UI
+- **Vite** + **@crxjs/vite-plugin** for extension bundling
 - **Tailwind CSS** for styling
 - **Chrome Extension Manifest V3**
 - **Shadow DOM** for style isolation on host pages
+- **@defillama/api** SDK for DeFiLlama integration
+- **Vitest** for unit and integration testing
 
 ## Project Structure
 
@@ -63,13 +75,15 @@ src/
 ├── popup/               # Extension popup (manual search)
 ├── options/             # Settings page
 ├── shared/
-│   ├── api/             # API clients (CoinGecko, Tokenomist, Etherscan, etc.)
+│   ├── api/             # API clients (CoinGecko, DeFiLlama)
+│   │   ├── coingecko.ts # Token identity, supply, market data
+│   │   └── defi-llama.ts # Prices, TVL, revenue, fees (uses @defillama/api SDK)
 │   ├── scoring/         # Tokenomics health scoring engine
 │   ├── resolver.ts      # Maps detected text → token/wallet identity
 │   ├── dictionary.ts    # Top 500 token dictionary + mapping
 │   ├── types.ts         # Shared TypeScript interfaces
-│   └── cache.ts         # chrome.storage caching layer
-├── tests/
+│   ├── cache.ts         # chrome.storage.local caching with TTLs
+│   └── rate-limiter.ts  # Per-API rate limiting with queue and backoff
 docs/
 public/                  # Extension icons and assets
 ```
@@ -86,12 +100,32 @@ npm run dev
 # Build for production
 npm run build
 
-# Run tests
+# Run unit tests
 npm test
+
+# Run integration tests (hits live APIs — requires internet)
+npx vitest run src/shared/api/coingecko.integration.test.ts
+npx vitest run src/shared/api/defi-llama.integration.test.ts
 
 # Lint
 npm run lint
 ```
+
+### Test Structure
+
+Tests are colocated with their source files:
+
+```
+src/shared/cache.ts              → src/shared/cache.test.ts
+src/shared/rate-limiter.ts       → src/shared/rate-limiter.test.ts
+src/shared/api/coingecko.ts      → src/shared/api/coingecko.test.ts
+                                   src/shared/api/coingecko.integration.test.ts
+src/shared/api/defi-llama.ts     → src/shared/api/defi-llama.test.ts
+                                   src/shared/api/defi-llama.integration.test.ts
+```
+
+- **Unit tests** (`*.test.ts`) — mock all external dependencies, run fast
+- **Integration tests** (`*.integration.test.ts`) — hit real APIs, verify response parsing and type mapping
 
 ## Loading the Extension
 
