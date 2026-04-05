@@ -23,21 +23,25 @@ function isElementVisible(el: Element): boolean {
 function isNodeVisible(node: Node): boolean {
   let current: Node | null = node;
   while (current) {
-    if (current.nodeType === Node.ELEMENT_NODE) {
-      const el = current as Element;
-      const tag = (current as Element).tagName;
-      if (IGNORED_TAGS.has(tag)) return false;
-      if (
-        (el as HTMLElement).isContentEditable ||
-        (el as HTMLElement).getAttribute("contenteditable") === "true" ||
-        (el as HTMLElement).getAttribute("contenteditable") === ""
-      )
-        return false;
-      if (!isElementVisible(el)) return false;
+    if (current instanceof Element) {
+      if (IGNORED_TAGS.has(current.tagName)) return false;
+      if (isContentEditable(current)) return false;
+      if (!isElementVisible(current)) return false;
     }
     current = current.parentNode;
   }
   return true;
+}
+
+/**
+ * Checks if an element is contenteditable.
+ * @param el - The element to check
+ * @returns True if the element is contenteditable
+ */
+function isContentEditable(el: Element): boolean {
+  const attr = el.getAttribute("contenteditable");
+  if (attr === "true" || attr === "") return true;
+  return "isContentEditable" in el && el.isContentEditable === true;
 }
 
 /**
@@ -60,7 +64,34 @@ export function getVisibleTextNodes(root: Node = document.body): Text[] {
 
   let node: Node | null;
   while ((node = walker.nextNode())) {
-    nodes.push(node as Text);
+    if (node instanceof Text) {
+      nodes.push(node);
+    }
+  }
+
+  return nodes;
+}
+
+/**
+ * Collects visible text nodes from a subtree using TreeWalker.
+ * @param root - The root node to scan
+ * @returns Array of visible Text nodes
+ */
+function collectVisibleTextNodes(root: Node): Text[] {
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.textContent?.trim()) return NodeFilter.FILTER_REJECT;
+      if (!isNodeVisible(node)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  let node: Node | null;
+  while ((node = walker.nextNode())) {
+    if (node instanceof Text) {
+      nodes.push(node);
+    }
   }
 
   return nodes;
@@ -86,27 +117,18 @@ export function startDynamicPageScanner(
     const newNodes: Text[] = [];
 
     for (const mutation of mutations) {
-      if (mutation.type === "childList") {
-        for (const node of mutation.addedNodes) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            if ((node as Text).textContent?.trim() && isNodeVisible(node)) {
-              newNodes.push(node as Text);
-            }
-          } else if (node.nodeType === Node.ELEMENT_NODE) {
-            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-              acceptNode(textNode) {
-                if (!textNode.textContent?.trim()) return NodeFilter.FILTER_REJECT;
-                if (!isNodeVisible(textNode)) return NodeFilter.FILTER_REJECT;
-                return NodeFilter.FILTER_ACCEPT;
-              },
-            });
+      if (mutation.type !== "childList") continue;
 
-            let textNode: Node | null;
-            while ((textNode = walker.nextNode())) {
-              newNodes.push(textNode as Text);
-            }
-          }
-        }
+      for (const added of mutation.addedNodes) {
+        const nodes =
+          added instanceof Text
+            ? added.textContent?.trim() && isNodeVisible(added)
+              ? [added]
+              : []
+            : added instanceof Element
+              ? collectVisibleTextNodes(added)
+              : [];
+        newNodes.push(...nodes);
       }
     }
 
