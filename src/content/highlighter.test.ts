@@ -9,8 +9,6 @@ describe("highlightNodes", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
-    const style = document.getElementById("crypto-xray-highlight-styles");
-    if (style) style.remove();
   });
 
   it("wraps matching terms in highlight spans", () => {
@@ -22,6 +20,18 @@ describe("highlightNodes", () => {
     expect(count).toBe(1);
     expect(document.body.innerHTML).toContain("crypto-xray-highlight");
     expect(document.body.querySelectorAll(".crypto-xray-highlight")).toHaveLength(2);
+  });
+
+  it("applies inline styles to highlight spans", () => {
+    const text = document.createTextNode("$BTC");
+    document.body.appendChild(text);
+
+    highlightNodes([text], ["$BTC"]);
+
+    const span = document.querySelector(".crypto-xray-highlight") as HTMLSpanElement;
+    expect(span).not.toBeNull();
+    expect(span?.style.background).toContain("rgba");
+    expect(span?.style.borderBottom).toContain("2px");
   });
 
   it("ignores already highlighted nodes", () => {
@@ -53,17 +63,6 @@ describe("highlightNodes", () => {
     expect(count).toBe(1);
     expect(document.body.querySelectorAll(".crypto-xray-highlight")).toHaveLength(1);
   });
-
-  it("injects styles into document head", () => {
-    const text = document.createTextNode("$BTC");
-    document.body.appendChild(text);
-
-    highlightNodes([text], ["$BTC"]);
-
-    const style = document.getElementById("crypto-xray-highlight-styles");
-    expect(style).not.toBeNull();
-    expect(style?.textContent).toContain("crypto-xray-highlight");
-  });
 });
 
 describe("removeAllHighlights", () => {
@@ -73,8 +72,6 @@ describe("removeAllHighlights", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
-    const style = document.getElementById("crypto-xray-highlight-styles");
-    if (style) style.remove();
   });
 
   it("removes all highlight spans and restores text", () => {

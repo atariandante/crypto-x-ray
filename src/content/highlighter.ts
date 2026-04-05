@@ -1,33 +1,31 @@
 /**
  * DOM highlighter for crypto-related terms.
- * Wraps detected tokens in styled spans with page-level style injection.
+ * Wraps detected tokens in styled spans with inline styles (CSP-safe).
  */
 
 const HIGHLIGHT_CLASS = "crypto-xray-highlight";
-const STYLE_ID = "crypto-xray-highlight-styles";
+
+const HIGHLIGHT_STYLE: Partial<CSSStyleDeclaration> = {
+  background: "rgba(99, 102, 241, 0.15)",
+  borderBottom: "2px solid rgba(99, 102, 241, 0.6)",
+  borderRadius: "2px",
+  cursor: "pointer",
+  padding: "0 2px",
+  transition: "background-color 0.15s ease",
+};
 
 /**
- * Injects highlight styles into the page document head.
+ * Creates a highlight span with inline styles.
+ * @param text - The text content to highlight
+ * @returns A styled span element
  */
-function ensureStylesInjected(): void {
-  if (document.getElementById(STYLE_ID)) return;
-
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    .${HIGHLIGHT_CLASS} {
-      background: rgba(99, 102, 241, 0.15);
-      border-bottom: 2px solid rgba(99, 102, 241, 0.6);
-      border-radius: 2px;
-      cursor: pointer;
-      padding: 0 2px;
-      transition: background-color 0.15s ease;
-    }
-    .${HIGHLIGHT_CLASS}:hover {
-      background: rgba(99, 102, 241, 0.3);
-    }
-  `;
-  document.head.appendChild(style);
+function createHighlightSpan(text: string): HTMLSpanElement {
+  const span = document.createElement("span");
+  span.className = HIGHLIGHT_CLASS;
+  span.textContent = text;
+  span.dataset.token = text.toLowerCase();
+  Object.assign(span.style, HIGHLIGHT_STYLE);
+  return span;
 }
 
 /**
@@ -83,10 +81,7 @@ function highlightNode(node: Text, pattern: RegExp): boolean {
       fragment.appendChild(document.createTextNode(text.slice(lastIndex, termStart)));
     }
 
-    const span = document.createElement("span");
-    span.className = HIGHLIGHT_CLASS;
-    span.textContent = term;
-    span.dataset.token = term.toLowerCase();
+    const span = createHighlightSpan(term);
     fragment.appendChild(span);
 
     lastIndex = pattern.lastIndex;
@@ -111,7 +106,6 @@ function highlightNode(node: Text, pattern: RegExp): boolean {
 export function highlightNodes(nodes: Text[], terms: string[]): number {
   if (terms.length === 0) return 0;
 
-  ensureStylesInjected();
   const pattern = buildPattern(terms);
   let count = 0;
 
