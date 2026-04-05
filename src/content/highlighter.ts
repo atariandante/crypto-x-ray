@@ -1,37 +1,19 @@
 /**
  * DOM highlighter for crypto-related terms.
- * Wraps detected tokens in styled spans with Shadow DOM isolation.
+ * Wraps detected tokens in styled spans with page-level style injection.
  */
 
 const HIGHLIGHT_CLASS = "crypto-xray-highlight";
-const SHADOW_HOST_ID = "crypto-xray-shadow-host";
+const STYLE_ID = "crypto-xray-highlight-styles";
 
 /**
- * Creates or retrieves the Shadow DOM host for highlight styles.
- * @returns The ShadowRoot for injecting highlight styles
- */
-function getShadowRoot(): ShadowRoot {
-  let host = document.getElementById(SHADOW_HOST_ID);
-  if (!host) {
-    host = document.createElement("div");
-    host.id = SHADOW_HOST_ID;
-    host.style.display = "none";
-    document.documentElement.appendChild(host);
-  }
-
-  if (host.shadowRoot) return host.shadowRoot;
-  return host.attachShadow({ mode: "open" });
-}
-
-/**
- * Injects highlight styles into the Shadow DOM.
+ * Injects highlight styles into the page document head.
  */
 function ensureStylesInjected(): void {
-  const root = getShadowRoot();
-  if (root.getElementById("crypto-xray-styles")) return;
+  if (document.getElementById(STYLE_ID)) return;
 
   const style = document.createElement("style");
-  style.id = "crypto-xray-styles";
+  style.id = STYLE_ID;
   style.textContent = `
     .${HIGHLIGHT_CLASS} {
       background: rgba(99, 102, 241, 0.15);
@@ -45,7 +27,7 @@ function ensureStylesInjected(): void {
       background: rgba(99, 102, 241, 0.3);
     }
   `;
-  root.appendChild(style);
+  document.head.appendChild(style);
 }
 
 /**

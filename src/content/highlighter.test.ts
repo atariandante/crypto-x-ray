@@ -9,8 +9,8 @@ describe("highlightNodes", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
-    const host = document.getElementById("crypto-xray-shadow-host");
-    if (host) host.remove();
+    const style = document.getElementById("crypto-xray-highlight-styles");
+    if (style) style.remove();
   });
 
   it("wraps matching terms in highlight spans", () => {
@@ -54,15 +54,15 @@ describe("highlightNodes", () => {
     expect(document.body.querySelectorAll(".crypto-xray-highlight")).toHaveLength(1);
   });
 
-  it("injects styles into Shadow DOM", () => {
+  it("injects styles into document head", () => {
     const text = document.createTextNode("$BTC");
     document.body.appendChild(text);
 
     highlightNodes([text], ["$BTC"]);
 
-    const host = document.getElementById("crypto-xray-shadow-host");
-    expect(host).not.toBeNull();
-    expect(host?.shadowRoot?.getElementById("crypto-xray-styles")).not.toBeNull();
+    const style = document.getElementById("crypto-xray-highlight-styles");
+    expect(style).not.toBeNull();
+    expect(style?.textContent).toContain("crypto-xray-highlight");
   });
 });
 
@@ -73,8 +73,8 @@ describe("removeAllHighlights", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
-    const host = document.getElementById("crypto-xray-shadow-host");
-    if (host) host.remove();
+    const style = document.getElementById("crypto-xray-highlight-styles");
+    if (style) style.remove();
   });
 
   it("removes all highlight spans and restores text", () => {
