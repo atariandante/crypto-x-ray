@@ -1,13 +1,25 @@
-// DOM text scanner using TreeWalker API with visibility checks
-// Returns text nodes from visible elements for token detection
+/**
+ * DOM text scanner using TreeWalker API with visibility checks.
+ * Returns text nodes from visible elements for token detection.
+ */
 
 const IGNORED_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "INPUT", "TEXTAREA"]);
 
+/**
+ * Checks if an element is visible on the page.
+ * @param el - The element to check
+ * @returns True if the element is visible, false otherwise
+ */
 function isElementVisible(el: Element): boolean {
   const style = window.getComputedStyle(el);
   return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
 }
 
+/**
+ * Checks if a node and all its ancestors are visible and not in ignored elements.
+ * @param node - The node to check
+ * @returns True if the node is visible, false otherwise
+ */
 function isNodeVisible(node: Node): boolean {
   let current: Node | null = node;
   while (current) {
@@ -28,6 +40,12 @@ function isNodeVisible(node: Node): boolean {
   return true;
 }
 
+/**
+ * Traverses the DOM and returns all visible text nodes with non-whitespace content.
+ * Ignores script, style, noscript, input, textarea, and contenteditable elements.
+ * @param root - The root node to start scanning from (defaults to document.body)
+ * @returns Array of visible Text nodes
+ */
 export function getVisibleTextNodes(root: Node = document.body): Text[] {
   if (!root) return [];
 
@@ -51,6 +69,13 @@ export function getVisibleTextNodes(root: Node = document.body): Text[] {
 let observer: MutationObserver | null = null;
 let scanTimeout: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Observes DOM mutations and reports newly added visible text nodes.
+ * Debounces rapid changes to avoid excessive scanning on dynamic pages.
+ * @param onNewNodes - Callback invoked with newly detected text nodes
+ * @param debounceMs - Debounce delay in milliseconds (default: 400)
+ * @returns Cleanup function to stop the observer
+ */
 export function startDynamicPageScanner(
   onNewNodes: (nodes: Text[]) => void,
   debounceMs = 400
