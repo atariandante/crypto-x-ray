@@ -158,16 +158,16 @@ Scope:
 - Basic background data fetching and caching
 
 Action Items:
-- [ ] Finalize entity detection engine (#1)
-- [ ] Implement highlight injection system (#2)
-- [ ] Set up background messaging pipeline (#3)
-- [ ] Integrate token data provider (#4)
-- [ ] Implement caching layer (#5)
-- [ ] Build tooltip UI (#6)
-- [ ] Implement insight engine (basic risk flags) (#7)
-- [ ] Add debounced DOM observer (#8)
-- [ ] Reduce false positives in detection (#9)
-- [ ] Validate UX on real-world sites (#10)
+- [ ] Finalize entity detection engine ([#3](https://github.com/atariandante/crypto-x-ray/issues/3))
+- [ ] Implement highlight injection system ([#4](https://github.com/atariandante/crypto-x-ray/issues/4))
+- [ ] Set up background messaging pipeline ([#5](https://github.com/atariandante/crypto-x-ray/issues/5))
+- [ ] Integrate token data providers — dictionary + RugCheck ([#6](https://github.com/atariandante/crypto-x-ray/issues/6))
+- [ ] Implement caching layer ([#7](https://github.com/atariandante/crypto-x-ray/issues/7))
+- [ ] Build tooltip UI ([#8](https://github.com/atariandante/crypto-x-ray/issues/8))
+- [ ] Implement insight engine with unified RiskProvider interface ([#9](https://github.com/atariandante/crypto-x-ray/issues/9))
+- [ ] Add debounced DOM observer ([#10](https://github.com/atariandante/crypto-x-ray/issues/10))
+- [ ] Reduce false positives in detection ([#11](https://github.com/atariandante/crypto-x-ray/issues/11))
+- [ ] Validate UX on real-world sites ([#12](https://github.com/atariandante/crypto-x-ray/issues/12))
 
 ---
 
@@ -183,15 +183,15 @@ Scope:
 - Reuse core detection + data + insight engine
 
 Action Items:
-- [ ] Define macOS architecture (#11)
-- [ ] Research system-wide text detection (#12)
-- [ ] Extract shared core logic into reusable package (#13)
-- [ ] Design global overlay UI (#14)
-- [ ] Implement system-wide detection (#15)
-- [ ] Connect to data + caching layer (#16)
-- [ ] Add quick access panel (keyboard shortcut) (#17)
-- [ ] Optimize performance (#18)
-- [ ] Validate UX across apps (#19)
+- [ ] Define macOS architecture (#13)
+- [ ] Research system-wide text detection (#14)
+- [ ] Extract shared core logic into reusable package (#15)
+- [ ] Design global overlay UI (#16)
+- [ ] Implement system-wide detection (#17)
+- [ ] Connect to data + caching layer (#18)
+- [ ] Add quick access panel (keyboard shortcut) (#19)
+- [ ] Optimize performance (#20)
+- [ ] Validate UX across apps (#21)
 
 ---
 
