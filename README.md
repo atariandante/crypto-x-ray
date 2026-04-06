@@ -19,259 +19,202 @@
 
 ---
 
-## The Problem
+# Crypto X-Ray
 
-You see a token mentioned on Twitter, Reddit, or a blog post. To evaluate it, you open CoinGecko, DeFiLlama, Etherscan, and a token unlock tracker in separate tabs. By the time you've checked supply dynamics and dilution risk, you've lost the thread.
+Crypto X-Ray is a Chrome extension that acts as a real-time crypto risk detector for the internet.
 
-**Crypto X-Ray eliminates that workflow.** Hover over any token mention or contract address and get a full analysis card inline — market cap, FDV, supply breakdown, unlock schedule, health score, and red flags. Think **Grammarly, but for crypto due diligence**.
+Instead of just showing token data, it scans any webpage, detects crypto-related entities (tokens, wallet addresses, contracts), and instantly tells you whether you should trust them.
 
----
-
-## ✨ Features
-
-- **🔍 Smart Detection** — Recognizes `$SOL`, "Ethereum", EVM addresses (`0x…`), Solana base58 addresses, and wallet addresses
-- **📊 Analysis Cards** — Inline overlays with market cap vs FDV, supply type, circulating %, allocation breakdown, and health scores
-- **🚨 Red Flag Alerts** — Automatic detection of high dilution risk, concentrated allocations, and suspicious unlock patterns
-- **⛓️ Multi-Chain** — Ethereum, Arbitrum, Base, Polygon, Optimism, BSC, Solana, and Avalanche
-- **🧠 TGE Analysis** — Evaluates newly launched tokens with unlock-day sell pressure and comparable benchmarks
-- **💼 Wallet Insights** — Hover on any wallet address to see portfolio breakdown and recent activity
-- **⚡ Instant & Cached** — TTL-based caching keeps the extension fast on repeat visits
+The goal is simple: help you avoid getting rugged.
 
 ---
 
-## Detection Tiers
+## Why this exists
 
-| Tier | Detects | Method | Speed |
-|------|---------|--------|-------|
-| **1** | Known tokens (`$SOL`, `"Arbitrum"`) | Local dictionary — top 500 by market cap | Instant |
-| **2** | Unknown contract addresses | On-chain lookup via Etherscan / Solscan | On hover |
-| **3** | Wallet addresses | Portfolio lookup via Debank / Etherscan | On hover |
+Crypto moves fast, and most users make decisions based on incomplete or misleading information.
+
+You see a token on Twitter.  
+A wallet address in Discord.  
+A contract on a random site.
+
+And you have seconds to decide:
+
+“Is this safe?”
+
+Today, that requires opening multiple tabs, checking explorers, and doing manual research.
+
+Crypto X-Ray compresses that into a few seconds directly in the page you are already on.
 
 ---
 
-## Data Sources
+## What it does
 
-| API | Role | Rate Limit | Status |
-|-----|------|------------|--------|
-| [CoinGecko](https://www.coingecko.com/) | Token identity, supply, market cap, FDV, categories | Free: 10–50 req/min | ✅ Implemented |
-| [DeFiLlama](https://defillama.com/) | Prices, TVL, revenue, fees, DEX volumes | Free: ~1000 req/min | ✅ Implemented |
-| [DeFiLlama Pro](https://defillama.com/) | Unlock schedules, allocation breakdowns, vesting | $300/mo | 🔜 Premium tier |
-| [Etherscan](https://etherscan.io/) | Contract verification, token info (EVM chains) | Free: 5 req/sec | 🔜 Planned |
-| [Solscan](https://solscan.io/) | Token metadata, holders (Solana) | Free: 100 req/min | 🔜 Planned |
-| [Debank](https://debank.com/) | Wallet portfolio breakdown | Free/Paid | 🔜 Planned |
+- Detects crypto entities directly in any webpage  
+  Tokens (e.g. ADA, ETH)  
+  Wallet addresses (0x...)  
+  ENS domains  
 
-> **Smart Routing:** Prices route through DeFiLlama (generous limits) to preserve CoinGecko quota for identity/supply data. See [`docs/data-sources.md`](docs/data-sources.md) for the full endpoint mapping.
+- Highlights them inline without breaking your browsing experience  
+
+- Shows instant risk insights  
+  Ownership concentration  
+  Liquidity signals  
+  Contract recency  
+  Basic trust indicators  
+
+- Provides a quick verdict  
+  Not just data, but a decision layer  
+
+---
+
+## Product philosophy
+
+This is not another CoinMarketCap overlay.
+
+Raw data is not the problem. Interpretation is.
+
+Crypto X-Ray focuses on:
+
+- Speed → understand in seconds  
+- Clarity → no dashboards, just signals  
+- Risk-first → protect users before informing them  
+
+Think of it as a “Web3 antivirus” rather than a data tool.
+
+---
+
+## Example
+
+You see a token mentioned on a page:
+
+ADA
+
+Instead of manually researching, you hover and get:
+
+Risk: Medium  
+- High concentration in top wallets  
+- Moderate liquidity  
+
+You immediately know whether to dig deeper or ignore it.
+
+---
+
+## How it works (high level)
+
+The extension has three main parts:
+
+1. Content Script  
+Scans the DOM and detects crypto-related entities.
+
+2. Background Layer  
+Fetches data, caches results, and computes insights.
+
+3. UI Layer  
+Displays tooltips and panels with risk summaries and explanations.
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Language | TypeScript 5.5 (strict mode) |
-| UI | React 18 |
-| Styling | Tailwind CSS 3.4 |
-| Build | Vite 5 + [@crxjs/vite-plugin](https://crxjs.dev/vite-plugin/) |
-| Extension | Chrome Manifest V3 |
-| Style Isolation | Shadow DOM |
-| Testing | Vitest |
-| Linting | ESLint + Prettier |
+Core:
+- TypeScript
+- Chrome Extension APIs (Manifest V3)
+
+Frontend / UI:
+- React (for tooltip and panel UI)
+- Shadow DOM (UI isolation inside webpages)
+
+DOM Processing:
+- TreeWalker API (text node traversal)
+- MutationObserver (dynamic DOM updates)
+
+Architecture:
+- Content Script (detection + highlighting)
+- Background Service Worker (data fetching, caching, insights)
+- Messaging system (chrome.runtime messaging)
+
+Data Layer:
+- External APIs (e.g. CoinGecko for token data)
+- In-memory caching with TTL strategy
+
+Future / Planned:
+- Shared core package (for cross-platform reuse)
+- macOS app (system-wide detection layer)
 
 ---
 
-## Architecture
+## Milestones
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    Web Page (any site)                    │
-│                                                          │
-│  Content Script                                          │
-│  ┌────────────┐   ┌────────────┐   ┌─────────────────┐  │
-│  │ Text       │──▶│ Detector   │──▶│ DOM Highlighter │  │
-│  │ Scanner    │   │ + Resolver │   │ (Shadow DOM)    │  │
-│  └────────────┘   └─────┬──────┘   └─────────────────┘  │
-│                         │                                │
-└─────────────────────────┼────────────────────────────────┘
-                          │ chrome.runtime.sendMessage()
-┌─────────────────────────┼────────────────────────────────┐
-│  Background Service Worker                               │
-│  ┌──────────┐   ┌───────┴──────┐   ┌─────────────────┐  │
-│  │ Rate     │──▶│ API Clients  │──▶│ Cache           │  │
-│  │ Limiter  │   │ CoinGecko    │   │ chrome.storage  │  │
-│  │          │   │ DeFiLlama    │   │ TTL-based       │  │
-│  └──────────┘   └──────────────┘   └─────────────────┘  │
-└──────────────────────────────────────────────────────────┘
-```
+### Milestone 1 — Chrome Extension (MVP)
 
-### Card Types
+Goal: Validate the core idea — real-time crypto risk detection directly in the browser.
 
-| Card | Description |
-|------|-------------|
-| `TokenCard` | Full analysis for indexed tokens — price, supply, FDV, unlocks, allocation, health score |
-| `UnknownTokenCard` | Basic analysis for unindexed contract addresses discovered on-chain |
-| `WalletCard` | Portfolio snapshot and recent transactions for wallet addresses |
+Status: In progress (initial SPIKES completed, see GitHub issues)
+
+Scope:
+- Detect tokens, wallet addresses, and ENS domains in the DOM
+- Highlight detected entities inline
+- Show tooltip with basic data (price, simple insights)
+- Basic background data fetching and caching
+
+Action Items:
+- [ ] Finalize entity detection engine (#1)
+- [ ] Implement highlight injection system (#2)
+- [ ] Set up background messaging pipeline (#3)
+- [ ] Integrate token data provider (#4)
+- [ ] Implement caching layer (#5)
+- [ ] Build tooltip UI (#6)
+- [ ] Implement insight engine (basic risk flags) (#7)
+- [ ] Add debounced DOM observer (#8)
+- [ ] Reduce false positives in detection (#9)
+- [ ] Validate UX on real-world sites (#10)
 
 ---
 
-## Project Structure
+### Milestone 2 — macOS App
 
-```
-src/
-├── background/             # Service worker — API calls, caching, rate limiting
-├── content/                # Content script — DOM scanning, detection, highlighting
-│   ├── text-scanner.ts     # TreeWalker + MutationObserver for live scanning
-│   ├── highlighter.ts      # Shadow DOM token highlights
-│   ├── detector.ts         # Token / address pattern matching
-│   └── chain-detector.ts   # Chain inference from page context
-├── card/                   # React analysis card components
-│   ├── TokenCard.tsx
-│   ├── UnknownTokenCard.tsx
-│   └── WalletCard.tsx
-├── popup/                  # Extension popup — manual token search
-├── options/                # Settings page
-└── shared/
-    ├── api/                # API clients (CoinGecko, DeFiLlama, …)
-    ├── scoring/            # Tokenomics health scoring engine
-    ├── resolver.ts         # Detection → token/wallet identity resolution
-    ├── dictionary.ts       # Top 500 token dictionary
-    ├── cache.ts            # chrome.storage caching with TTLs
-    ├── rate-limiter.ts     # Per-API rate limiting with queue + backoff
-    └── types.ts            # Shared TypeScript interfaces
-docs/
-├── data-sources.md         # Full API endpoint mapping & routing strategy
-└── product-strategy.md     # Tier structure & revenue model
-public/
-└── icons/                  # Extension icons (16–128px)
-```
+Goal: Expand from browser-only context to a system-wide crypto intelligence layer.
 
----
+Status: Not started
 
-## Getting Started
+Scope:
+- Detect crypto entities across applications (browser, Discord, Slack, etc.)
+- Provide global overlay or floating panel
+- Reuse core detection + data + insight engine
 
-### Prerequisites
-
-- **Node.js** ≥ 18
-- **npm** ≥ 9
-- A Chromium-based browser (Chrome, Brave, Edge, Arc)
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/atariandante/crypto-x-ray.git
-cd crypto-x-ray
-
-# Install dependencies
-npm install
-
-# Copy environment variables
-cp .env.example .env
-# Fill in your API keys (CoinGecko free tier works out of the box)
-```
-
-### Development
-
-```bash
-# Build in watch mode (rebuilds on every file change)
-npm run dev
-
-# Production build
-npm run build
-
-# Run all unit tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run integration tests (hits live APIs — requires internet)
-npx vitest run src/shared/api/coingecko.integration.test.ts
-npx vitest run src/shared/api/defi-llama.integration.test.ts
-
-# Lint
-npm run lint
-
-# Format
-npm run format
-```
-
-### Load the Extension
-
-1. Run `npm run build` (or `npm run dev` for watch mode)
-2. Open `chrome://extensions/`
-3. Enable **Developer mode** (top right)
-4. Click **Load unpacked**
-5. Select the `dist/` folder
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and add your keys. Only CoinGecko is required for basic functionality — the rest unlock additional detection tiers.
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_COINGECKO_API_KEY` | Recommended | CoinGecko API key (free tier works) |
-| `VITE_ETHERSCAN_API_KEY` | Optional | Etherscan for EVM contract lookups |
-| `VITE_SOLSCAN_API_KEY` | Optional | Solscan Pro for Solana token data |
-| `VITE_HELIUS_API_KEY` | Optional | Helius for Solana RPC + DAS API |
-| `VITE_DEBANK_API_KEY` | Optional | Debank for wallet portfolio data |
-| `VITE_BASESCAN_API_KEY` | Optional | Basescan for Base chain lookups |
-| `VITE_ARBISCAN_API_KEY` | Optional | Arbiscan for Arbitrum chain lookups |
-
----
-
-## Testing
-
-Tests are **colocated** with their source files:
-
-```
-src/shared/cache.ts                 → src/shared/cache.test.ts
-src/shared/rate-limiter.ts          → src/shared/rate-limiter.test.ts
-src/shared/api/coingecko.ts         → src/shared/api/coingecko.test.ts
-                                      src/shared/api/coingecko.integration.test.ts
-src/shared/api/defi-llama.ts        → src/shared/api/defi-llama.test.ts
-                                      src/shared/api/defi-llama.integration.test.ts
-src/content/text-scanner.ts         → src/content/text-scanner.test.ts
-src/content/highlighter.ts          → src/content/highlighter.test.ts
-```
-
-- **Unit tests** (`*.test.ts`) — mock all external dependencies, run fast
-- **Integration tests** (`*.integration.test.ts`) — hit real APIs, verify response parsing
+Action Items:
+- [ ] Define macOS architecture (#11)
+- [ ] Research system-wide text detection (#12)
+- [ ] Extract shared core logic into reusable package (#13)
+- [ ] Design global overlay UI (#14)
+- [ ] Implement system-wide detection (#15)
+- [ ] Connect to data + caching layer (#16)
+- [ ] Add quick access panel (keyboard shortcut) (#17)
+- [ ] Optimize performance (#18)
+- [ ] Validate UX across apps (#19)
 
 ---
 
 ## Roadmap
 
-### Milestone 1 — Chrome Extension _(current)_
-
-Detect tokens on web pages and show inline analysis cards with tokenomics data.
-
-### Milestone 2 — Pro Tier
-
-Portfolio Risk Scanner, Fundamentals Alerts, Bulk Page Scan, Multi-Token Comparison, and Export/Share.
-
-### Milestone 3 — Desktop App
-
-Grammarly-style overlay for native apps (Telegram Desktop, WhatsApp, Slack) using Tauri + OS accessibility APIs.
+- Better risk scoring engine  
+- Wallet intelligence (whales, smart money)  
+- More accurate detection (reduce false positives)  
+- Support for more chains and data providers  
+- Side panel with deeper analysis  
 
 ---
 
-## Contributing
+## Current status
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/my-feature`)
-3. Commit your changes (`git commit -m "feat: add my feature"`)
-4. Push to the branch (`git push origin feat/my-feature`)
-5. Open a Pull Request
+Early stage / experimental.
 
-Please follow the existing code style — the project uses **ESLint** + **Prettier** with the config in `.eslintrc.json` and `.prettierrc`.
+This project started as a spike to explore whether real-time crypto context on any webpage is useful.
 
----
-
-## License
-
-[MIT](LICENSE)
+We are currently validating:
+- Detection accuracy  
+- Performance on real-world pages  
+- Whether users actually rely on the insights  
 
 ---
 
