@@ -158,13 +158,13 @@ Scope:
 - Basic background data fetching and caching
 
 Action Items:
+- [ ] Integrate token data providers — dictionary + RugCheck ([#6](https://github.com/atariandante/crypto-x-ray/issues/6))
 - [ ] Finalize entity detection engine ([#3](https://github.com/atariandante/crypto-x-ray/issues/3))
+- [ ] Implement caching layer ([#7](https://github.com/atariandante/crypto-x-ray/issues/7))
 - [ ] Implement highlight injection system ([#4](https://github.com/atariandante/crypto-x-ray/issues/4))
 - [ ] Set up background messaging pipeline ([#5](https://github.com/atariandante/crypto-x-ray/issues/5))
-- [ ] Integrate token data providers — dictionary + RugCheck ([#6](https://github.com/atariandante/crypto-x-ray/issues/6))
-- [ ] Implement caching layer ([#7](https://github.com/atariandante/crypto-x-ray/issues/7))
-- [ ] Build tooltip UI ([#8](https://github.com/atariandante/crypto-x-ray/issues/8))
 - [ ] Implement insight engine with unified RiskProvider interface ([#9](https://github.com/atariandante/crypto-x-ray/issues/9))
+- [ ] Build tooltip UI ([#8](https://github.com/atariandante/crypto-x-ray/issues/8))
 - [ ] Add debounced DOM observer ([#10](https://github.com/atariandante/crypto-x-ray/issues/10))
 - [ ] Reduce false positives in detection ([#11](https://github.com/atariandante/crypto-x-ray/issues/11))
 - [ ] Validate UX on real-world sites ([#12](https://github.com/atariandante/crypto-x-ray/issues/12))
