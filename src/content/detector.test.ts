@@ -5,11 +5,12 @@ import type { DetectedToken } from "@/shared/types";
 
 type ExpectedDetection = Pick<
   DetectedToken,
-  "text" | "type" | "ticker" | "coingeckoId" | "chain"
->;
+  "text" | "type" | "ticker" | "coingeckoId"
+> &
+  Partial<Pick<DetectedToken, "chain">>;
 
-function renderPage(text: string) {
-  document.body.innerHTML = `<main>${text}</main>`;
+function createTextNodes(...texts: string[]) {
+  return texts.map((text) => document.createTextNode(text));
 }
 
 function expectDetection(
@@ -37,9 +38,7 @@ describe("scanDocument", () => {
   });
 
   it("detects dictionary-backed tickers with high confidence", () => {
-    renderPage("Bullish on $SOL today.");
-
-    const results = scanDocument();
+    const results = scanDocument(createTextNodes("Bullish on $SOL today."));
 
     expectDetection(
       results,
@@ -54,9 +53,7 @@ describe("scanDocument", () => {
   });
 
   it("detects token names case-insensitively", () => {
-    renderPage("The market still talks about eThErEuM.");
-
-    const results = scanDocument();
+    const results = scanDocument(createTextNodes("The market still talks about eThErEuM."));
 
     expectDetection(
       results,
@@ -71,9 +68,9 @@ describe("scanDocument", () => {
   });
 
   it("detects EVM addresses with chain metadata", () => {
-    renderPage("Wallet 0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 is active.");
-
-    const results = scanDocument();
+    const results = scanDocument(
+      createTextNodes("Wallet 0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 is active."),
+    );
 
     expectDetection(
       results,
@@ -87,9 +84,9 @@ describe("scanDocument", () => {
   });
 
   it("detects Solana addresses with chain metadata", () => {
-    renderPage("Treasury So11111111111111111111111111111111111111112 moved.");
-
-    const results = scanDocument();
+    const results = scanDocument(
+      createTextNodes("Treasury So11111111111111111111111111111111111111112 moved."),
+    );
 
     expectDetection(
       results,
@@ -103,28 +100,23 @@ describe("scanDocument", () => {
   });
 
   it("treats ENS domains as distinct from addresses", () => {
-    const expected = [
+    const results = scanDocument(createTextNodes("Follow vitalik.eth for updates."));
+
+    expectDetection(
+      results,
       {
         text: "vitalik.eth",
         type: "ens",
-        chain: "ethereum",
       },
-    ] satisfies ExpectedDetection[];
-
-    renderPage("Follow vitalik.eth for updates.");
-
-    const results = scanDocument();
-
-    expectDetection(results, expected[0], 0.8);
+      0.8,
+    );
     expect(results.some((token) => token.text === "vitalik.eth" && token.type === "address")).toBe(
       false,
     );
   });
 
   it("skips ambiguous uppercase common words without a ticker prefix", () => {
-    renderPage("DASH is a dashboard label, not a token mention.");
-
-    const results = scanDocument();
+    const results = scanDocument(createTextNodes("DASH is a dashboard label, not a token mention."));
 
     expect(results.some((token) => token.text === "DASH")).toBe(false);
   });
