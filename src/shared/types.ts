@@ -235,6 +235,37 @@ export interface TGEComparable {
 }
 
 // ============================================================
+// RugCheck data
+// ============================================================
+
+export interface RugCheckRisk {
+  name: string;
+  level: string;
+  description?: string;
+  value?: string;
+  score?: number;
+}
+
+export interface RugCheckSummary {
+  mint: string;
+  score: number;
+  normalizedScore: number;
+  tokenProgram: string;
+  tokenType: string;
+  lpLockedPct?: number;
+  risks: RugCheckRisk[];
+}
+
+export interface RugCheckReport extends RugCheckSummary {
+  rugged: boolean;
+  topHolders: Record<string, unknown>[];
+  markets: Record<string, unknown>[];
+  graphInsidersDetected: number;
+  insiderNetworks: Record<string, unknown>[];
+  creatorTokens: Record<string, unknown>[];
+}
+
+// ============================================================
 // Settings
 // ============================================================
 
@@ -268,6 +299,7 @@ export const CACHE_TTL = {
   SUPPLY: 60 * 60 * 1000, // 1 hour
   ALLOCATION: 24 * 60 * 60 * 1000, // 24 hours
   DICTIONARY: 7 * 24 * 60 * 60 * 1000, // 1 week
+  RUGCHECK: 5 * 60 * 1000, // 5 minutes
   ADDRESS_RESOLUTION: 5 * 60 * 1000, // 5 minutes
   WALLET: 5 * 60 * 1000, // 5 minutes
 } as const;

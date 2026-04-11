@@ -14,6 +14,7 @@ export enum ApiName {
   CoinGecko = "coingecko",
   DefiLlama = "defillama",
   Etherscan = "etherscan",
+  RugCheck = "rugcheck",
   Solscan = "solscan",
 }
 
@@ -36,6 +37,11 @@ const API_CONFIGS: Record<ApiName, RateLimiterConfig> = {
   },
   [ApiName.Etherscan]: {
     maxRequestsPerMinute: 300, // 5/sec = 300/min
+    maxRetries: 2,
+    baseBackoffMs: 1000,
+  },
+  [ApiName.RugCheck]: {
+    maxRequestsPerMinute: 60,
     maxRetries: 2,
     baseBackoffMs: 1000,
   },
