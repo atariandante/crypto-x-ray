@@ -1,3 +1,5 @@
+import type { DetectedToken } from "@/shared/types";
+
 /**
  * DOM highlighter for crypto-related terms.
  * Wraps detected tokens in styled spans with inline styles (CSP-safe).
@@ -21,6 +23,7 @@ export interface HighlightRange {
   end: number;
   start: number;
   text: string;
+  detection?: DetectedToken;
 }
 
 /**
@@ -28,11 +31,24 @@ export interface HighlightRange {
  * @param text - The text content to highlight
  * @returns A styled span element
  */
-function createHighlightSpan(text: string): HTMLSpanElement {
+function createHighlightSpan(text: string, detection?: DetectedToken): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = HIGHLIGHT_CLASS;
   span.textContent = text;
   span.dataset.token = text.toLowerCase();
+  if (detection) {
+    span.dataset.entityType = detection.type;
+    span.dataset.confidence = String(detection.confidence);
+    if (detection.coingeckoId) {
+      span.dataset.coingeckoId = detection.coingeckoId;
+    }
+    if (detection.ticker) {
+      span.dataset.ticker = detection.ticker;
+    }
+    if (detection.chain) {
+      span.dataset.chain = detection.chain;
+    }
+  }
   Object.assign(span.style, HIGHLIGHT_STYLE);
   return span;
 }
@@ -144,7 +160,7 @@ export function highlightRanges(node: Text, ranges: HighlightRange[]): boolean {
       fragment.appendChild(document.createTextNode(text.slice(lastIndex, range.start)));
     }
 
-    fragment.appendChild(createHighlightSpan(range.text));
+    fragment.appendChild(createHighlightSpan(range.text, range.detection));
     lastIndex = range.end;
   }
 

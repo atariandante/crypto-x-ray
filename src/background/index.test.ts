@@ -108,4 +108,53 @@ describe("background handleMessage", () => {
       },
     });
   });
+
+  it("returns profile and risk assessment for GET_RISK_ASSESSMENT token requests", async () => {
+    const profile: TokenProfile = {
+      id: "ethereum",
+      coingeckoId: "ethereum",
+      name: "Ethereum",
+      symbol: "ETH",
+      chains: ["ethereum"],
+      price: 1000,
+      priceChange24h: 0,
+      ath: 4000,
+      supply: {
+        type: "inflationary",
+        circulatingSupply: 100,
+        totalSupply: 100,
+        circulatingPercent: 100,
+        marketCap: 1000000,
+        fdv: 1000000,
+        fdvToMcapRatio: 1,
+        hasBurnMechanism: false,
+      },
+      lastUpdated: Date.now(),
+    };
+
+    fetchTokenById.mockResolvedValue(profile);
+    fetchFundamentals.mockResolvedValue(null);
+    fetchPrices.mockResolvedValue({});
+    getRiskAssessment.mockResolvedValue({
+      riskLevel: "low",
+      score: 10,
+      verdict: "No major concerns detected",
+      insights: [],
+      providers: ["Internal Heuristics"],
+    });
+
+    const { handleMessage } = await import("./index");
+    const result = await handleMessage({
+      type: "GET_RISK_ASSESSMENT",
+      payload: { id: "ethereum" },
+    });
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        profile: expect.objectContaining({ id: "ethereum" }),
+        risk: expect.objectContaining({ riskLevel: "low" }),
+      },
+    });
+  });
 });
