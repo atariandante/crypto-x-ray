@@ -5,7 +5,7 @@
 /**
  * Identifies which kind of entity the content script detected in page text.
  */
-export type DetectionType = "ticker" | "name" | "address";
+export type DetectionType = "ticker" | "name" | "address" | "ens";
 
 /**
  * Represents a candidate entity found during page scanning before resolution.
