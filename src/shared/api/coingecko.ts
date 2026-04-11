@@ -1,4 +1,4 @@
-import { getCached, setCached } from "../cache";
+import { getCached, setCached, withCache } from "../cache";
 import { ApiName, getRateLimiter } from "../rate-limiter";
 import {
   CACHE_TTL,
@@ -136,17 +136,13 @@ export async function fetchCoinList(): Promise<CoinGeckoListItem[]> {
  * Fetch full token data by CoinGecko ID and map to TokenProfile.
  */
 export async function fetchTokenById(id: string): Promise<TokenProfile> {
-  const cacheKey = `cg:coin:${id}`;
-  const cached = await getCached<TokenProfile>(cacheKey);
-  if (cached) return cached;
+  return withCache(`token:${id}`, CACHE_TTL.SUPPLY, async () => {
+    const coin = await fetchJSON<CoinGeckoCoin>(
+      `${BASE_URL}/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`,
+    );
 
-  const coin = await fetchJSON<CoinGeckoCoin>(
-    `${BASE_URL}/coins/${id}?localization=false&tickers=false&community_data=false&developer_data=false`,
-  );
-
-  const profile = mapCoinToProfile(coin);
-  await setCached(cacheKey, profile, CACHE_TTL.SUPPLY);
-  return profile;
+    return mapCoinToProfile(coin);
+  });
 }
 
 /**
@@ -160,7 +156,7 @@ export async function fetchTokenByContract(
   const platformId = chainToPlatformId(chain);
   if (!platformId) return null;
 
-  const cacheKey = `cg:contract:${chain}:${contractAddress}`;
+  const cacheKey = `token:${chain}:${contractAddress}`;
   const cached = await getCached<TokenProfile>(cacheKey);
   if (cached) return cached;
 
@@ -184,16 +180,11 @@ export async function fetchSimplePrices(
   ids: string[],
 ): Promise<CoinGeckoSimplePrice> {
   const idStr = ids.join(",");
-  const cacheKey = `cg:prices:${idStr}`;
-  const cached = await getCached<CoinGeckoSimplePrice>(cacheKey);
-  if (cached) return cached;
-
-  const data = await fetchJSON<CoinGeckoSimplePrice>(
-    `${BASE_URL}/simple/price?ids=${idStr}&vs_currencies=${VS_CURRENCY}&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true`,
+  return withCache(`price:${idStr}`, CACHE_TTL.PRICE, async () =>
+    fetchJSON<CoinGeckoSimplePrice>(
+      `${BASE_URL}/simple/price?ids=${idStr}&vs_currencies=${VS_CURRENCY}&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true`,
+    ),
   );
-
-  await setCached(cacheKey, data, CACHE_TTL.PRICE);
-  return data;
 }
 
 // ---------- Mapping helpers ----------

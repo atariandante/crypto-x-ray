@@ -1,5 +1,5 @@
 import { DefiLlama } from "@defillama/api";
-import { getCached, setCached } from "../cache";
+import { getCached, setCached, withCache } from "../cache";
 import { CACHE_TTL, Chain, FundamentalsInfo } from "../types";
 
 const client = new DefiLlama();
@@ -83,15 +83,10 @@ export async function fetchPrices(
   coinIds: string[],
 ): Promise<Record<string, CoinPrice>> {
   const coinStr = coinIds.join(",");
-  const cacheKey = `dl:prices:${coinStr}`;
-  const cached = await getCached<Record<string, CoinPrice>>(cacheKey);
-  if (cached) return cached;
-
-  const data = await client.prices.getCurrentPrices(coinIds);
-  const coins = normalizeCoinPrices(data.coins);
-
-  await setCached(cacheKey, coins, CACHE_TTL.PRICE);
-  return coins;
+  return withCache(`price:${coinStr}`, CACHE_TTL.PRICE, async () => {
+    const data = await client.prices.getCurrentPrices(coinIds);
+    return normalizeCoinPrices(data.coins);
+  });
 }
 
 /**
@@ -243,32 +238,35 @@ export async function fetchFundamentals(
   const protocol = await findProtocolByGeckoId(geckoId);
   if (!protocol) return null;
 
-  const slug = protocol.slug ?? protocol.name.toLowerCase().replace(/\s+/g, "-");
-  const [detail, fees] = await Promise.all([
-    fetchProtocolDetail(slug),
-    fetchFees(slug),
-  ]);
+  return withCache(`fundamentals:${geckoId}`, CACHE_TTL.SUPPLY, async () => {
+    const slug =
+      protocol.slug ?? protocol.name.toLowerCase().replace(/\s+/g, "-");
+    const [detail, fees] = await Promise.all([
+      fetchProtocolDetail(slug),
+      fetchFees(slug),
+    ]);
 
-  const tvlHistory = detail?.tvl ?? [];
-  const tvlTrend = inferTrend(
-    tvlHistory.map((p) => p.totalLiquidityUSD),
-    TREND_LOOKBACK_DAYS,
-  );
+    const tvlHistory = detail?.tvl ?? [];
+    const tvlTrend = inferTrend(
+      tvlHistory.map((p) => p.totalLiquidityUSD),
+      TREND_LOOKBACK_DAYS,
+    );
 
-  const revenueChart = fees?.totalDataChart ?? [];
-  const revenueTrend = inferTrend(
-    revenueChart.map((p) => p[1]),
-    TREND_LOOKBACK_DAYS,
-  );
+    const revenueChart = fees?.totalDataChart ?? [];
+    const revenueTrend = inferTrend(
+      revenueChart.map((p) => p[1]),
+      TREND_LOOKBACK_DAYS,
+    );
 
-  return {
-    tvlUsd: protocol.tvl,
-    tvlTrend,
-    revenueUsd: fees?.total30d
-      ? (fees.total30d / DAYS_IN_MONTH) * DAYS_IN_YEAR
-      : undefined,
-    revenueTrend,
-  };
+    return {
+      tvlUsd: protocol.tvl,
+      tvlTrend,
+      revenueUsd: fees?.total30d
+        ? (fees.total30d / DAYS_IN_MONTH) * DAYS_IN_YEAR
+        : undefined,
+      revenueTrend,
+    };
+  });
 }
 
 // ---------- Trend helpers ----------
