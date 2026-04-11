@@ -6,6 +6,16 @@ const EVM_ADDRESS_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g;
 const SOLANA_ADDRESS_PATTERN = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g;
 const TICKER_PATTERN = /(^|[^A-Za-z0-9])(\$[A-Z]{2,5})(?=$|[^A-Za-z0-9])/g;
 const AMBIGUOUS_NAME_MATCHES = new Set(["dash", "rain"]);
+const CRYPTO_CONTEXT_WORD_PATTERN =
+  "\\b(token|tokens|coin|coins|crypto|blockchain|protocol|wallet|wallets|address|addresses|chain|network|market|markets|price|prices|chart|charts|holder|holders|trader|traders|trading|exchange|exchanges|defi|dex|staking|liquidity|airdrop|listing|supply)\\b";
+const BEFORE_CRYPTO_CONTEXT_PATTERN = new RegExp(
+  `${CRYPTO_CONTEXT_WORD_PATTERN}(?:\\W+\\w+){0,2}\\W*$`,
+  "i",
+);
+const AFTER_CRYPTO_CONTEXT_PATTERN = new RegExp(
+  `^\\W*(?:\\w+\\W+){0,2}${CRYPTO_CONTEXT_WORD_PATTERN}`,
+  "i",
+);
 
 interface Span {
   start: number;
@@ -141,12 +151,12 @@ function collectNameMatches(text: string): SpanMatch[] {
     let match: RegExpExecArray | null;
     while ((match = namePattern.pattern.exec(text)) !== null) {
       const value = match[2];
-      if (isAmbiguousNameMatch(value)) {
+      const start = match.index + match[1].length;
+      const end = start + value.length;
+      if (!isAcceptedNameMatch(text, start, end, value)) {
         continue;
       }
 
-      const start = match.index + match[1].length;
-      const end = start + value.length;
       matches.push({
         start,
         end,
@@ -206,10 +216,27 @@ function reserveSpan(match: Span, occupied: Span[]): boolean {
 }
 
 /**
- * Filters dictionary names that double as ordinary English words in prose.
+ * Accepts unambiguous names immediately and requires local crypto context for ambiguous ones.
  */
-function isAmbiguousNameMatch(value: string): boolean {
-  return AMBIGUOUS_NAME_MATCHES.has(value.toLowerCase());
+function isAcceptedNameMatch(text: string, start: number, end: number, value: string): boolean {
+  if (!AMBIGUOUS_NAME_MATCHES.has(value.toLowerCase())) {
+    return true;
+  }
+
+  return hasNearbyCryptoContext(text, start, end);
+}
+
+/**
+ * Looks for crypto-oriented vocabulary within a few words of an ambiguous name.
+ */
+function hasNearbyCryptoContext(text: string, start: number, end: number): boolean {
+  const beforeContext = text.slice(Math.max(0, start - 40), start);
+  const afterContext = text.slice(end, Math.min(text.length, end + 40));
+
+  return (
+    BEFORE_CRYPTO_CONTEXT_PATTERN.test(beforeContext) ||
+    AFTER_CRYPTO_CONTEXT_PATTERN.test(afterContext)
+  );
 }
 
 /**

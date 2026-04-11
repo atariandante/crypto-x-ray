@@ -123,6 +123,23 @@ describe("scanDocument", () => {
     expect(results.some((token) => token.text.toLowerCase() === "rain")).toBe(false);
   });
 
+  it("detects ambiguous token names when nearby crypto context disambiguates them", () => {
+    const results = scanDocument(
+      createTextNodes("Rain token holders tracked the protocol after the exchange listing."),
+    );
+
+    expectDetection(
+      results,
+      {
+        text: "Rain",
+        type: "name",
+        ticker: "RAIN",
+        coingeckoId: "rain",
+      },
+      0.9,
+    );
+  });
+
   it("prefers longer overlapping names while preserving structured matcher precedence", () => {
     const results = scanDocument(
       createTextNodes(
