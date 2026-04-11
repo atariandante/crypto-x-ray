@@ -163,6 +163,21 @@ describe("scanDocument", () => {
     );
   });
 
+  it("returns stable detection text values for content-script highlighting", () => {
+    const detections = scanDocument(
+      createTextNodes(
+        "Track $SOL, vitalik.eth, and Ethereum.",
+        "Ignore plain LINK when it is not a ticker.",
+      ),
+    );
+
+    expect(detections.map((detection) => detection.text)).toEqual([
+      "$SOL",
+      "vitalik.eth",
+      "Ethereum",
+    ]);
+  });
+
   it("prefers longer overlapping names while preserving structured matcher precedence", () => {
     const results = scanDocument(
       createTextNodes(
