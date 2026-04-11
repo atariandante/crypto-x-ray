@@ -1,3 +1,5 @@
-// Wallet analysis card — EOA addresses with portfolio
-// TODO: Implement in T-05
+/**
+ * Displays analysis for wallet addresses and portfolio context.
+ * This placeholder keeps the wallet-specific UI contract stable.
+ */
 export function WalletCard() { return <div>Wallet Card</div>; }
