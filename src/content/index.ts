@@ -1,24 +1,10 @@
+import { highlightDetectedTerms } from "./highlight-detections";
 import { getVisibleTextNodes, startDynamicPageScanner } from "./text-scanner";
-import { highlightNodes } from "./highlighter";
 
 try {
   console.log("[Crypto X-Ray] Content script loaded");
 
-  const DEMO_TERMS = [
-    "$SOL",
-    "$ETH",
-    "$BTC",
-    "Bitcoin",
-    "Ethereum",
-    "Solana",
-    "0x",
-    "blockchain",
-    "DeFi",
-    "NFT",
-    "wallet",
-  ];
-
-  function scan() {
+  function scan(): void {
     console.log("[Crypto X-Ray] Starting scan...");
     const nodes = getVisibleTextNodes();
     console.log(`[Crypto X-Ray] Found ${nodes.length} visible text nodes`);
@@ -30,15 +16,15 @@ try {
       );
     }
 
-    const highlighted = highlightNodes(nodes, DEMO_TERMS);
-    console.log(`[Crypto X-Ray] Highlighted ${highlighted} nodes with terms:`, DEMO_TERMS);
+    const highlighted = highlightDetectedTerms(nodes);
+    console.log(`[Crypto X-Ray] Highlighted ${highlighted} nodes from detector output`);
   }
 
   scan();
 
   startDynamicPageScanner((newNodes) => {
     console.log(`[Crypto X-Ray] ${newNodes.length} new nodes detected`);
-    const highlighted = highlightNodes(newNodes, DEMO_TERMS);
+    const highlighted = highlightDetectedTerms(newNodes);
     console.log(`[Crypto X-Ray] Highlighted ${highlighted} new nodes`);
   });
 

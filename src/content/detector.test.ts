@@ -131,6 +131,12 @@ describe("scanDocument", () => {
     expect(results.some((token) => token.text === "Canton")).toBe(false);
   });
 
+  it("skips top-ranked ambiguous names in ordinary prose", () => {
+    const results = scanDocument(createTextNodes("TRON Legacy is still a cult movie."));
+
+    expect(results.some((token) => token.text === "TRON")).toBe(false);
+  });
+
   it("detects ambiguous token names when nearby crypto context disambiguates them", () => {
     const results = scanDocument(
       createTextNodes("Rain token holders tracked the protocol after the exchange listing."),
@@ -161,6 +167,21 @@ describe("scanDocument", () => {
       },
       0.9,
     );
+  });
+
+  it("returns stable detection text values for content-script highlighting", () => {
+    const detections = scanDocument(
+      createTextNodes(
+        "Track $SOL, vitalik.eth, and Ethereum.",
+        "Ignore plain LINK when it is not a ticker.",
+      ),
+    );
+
+    expect(detections.map((detection) => detection.text)).toEqual([
+      "$SOL",
+      "vitalik.eth",
+      "Ethereum",
+    ]);
   });
 
   it("prefers longer overlapping names while preserving structured matcher precedence", () => {
