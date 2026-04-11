@@ -1,26 +1,8 @@
-import { scanDocument } from "./detector";
-import { highlightNodes } from "./highlighter";
+import { highlightDetectedTerms } from "./highlight-detections";
 import { getVisibleTextNodes, startDynamicPageScanner } from "./text-scanner";
 
 try {
   console.log("[Crypto X-Ray] Content script loaded");
-
-  /**
-   * Runs detector-driven highlighting for the current batch of text nodes.
-   * The detector can emit repeated terms across nodes, but the highlighter
-   * contract expects a unique term list.
-   */
-  function highlightDetectedTerms(nodes: Text[]): number {
-    const detections = scanDocument(nodes);
-    const terms = [...new Set(detections.map((detection) => detection.text))];
-
-    console.log(
-      `[Crypto X-Ray] Detector returned ${detections.length} detections and ${terms.length} unique terms`,
-      terms
-    );
-
-    return highlightNodes(nodes, terms);
-  }
 
   function scan(): void {
     console.log("[Crypto X-Ray] Starting scan...");
