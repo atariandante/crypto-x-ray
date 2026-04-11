@@ -22,9 +22,15 @@ try {
 
   scan();
 
-  startDynamicPageScanner((newNodes) => {
-    console.log(`[Crypto X-Ray] ${newNodes.length} new nodes detected`);
-    const highlighted = highlightDetectedTerms(newNodes);
+  startDynamicPageScanner((event) => {
+    if (event.type === "full") {
+      console.log("[Crypto X-Ray] SPA navigation detected, running full re-scan");
+      scan();
+      return;
+    }
+
+    console.log(`[Crypto X-Ray] ${event.nodes.length} new nodes detected`);
+    const highlighted = highlightDetectedTerms(event.nodes);
     console.log(`[Crypto X-Ray] Highlighted ${highlighted} new nodes`);
   });
 
