@@ -5,7 +5,7 @@ const ENS_PATTERN = /\b[a-z0-9-]+\.eth\b/gi;
 const EVM_ADDRESS_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g;
 const SOLANA_ADDRESS_PATTERN = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g;
 const TICKER_PATTERN = /(^|[^A-Za-z0-9])(\$[A-Z]{2,5})(?=$|[^A-Za-z0-9])/g;
-const AMBIGUOUS_UPPERCASE_NAMES = new Set(["DASH", "LINK"]);
+const AMBIGUOUS_NAME_MATCHES = new Set(["dash", "rain"]);
 
 interface Span {
   start: number;
@@ -141,7 +141,7 @@ function collectNameMatches(text: string): SpanMatch[] {
     let match: RegExpExecArray | null;
     while ((match = namePattern.pattern.exec(text)) !== null) {
       const value = match[2];
-      if (isAmbiguousUppercaseName(value)) {
+      if (isAmbiguousNameMatch(value)) {
         continue;
       }
 
@@ -206,10 +206,10 @@ function reserveSpan(match: Span, occupied: Span[]): boolean {
 }
 
 /**
- * Filters all-caps names that commonly appear in non-crypto prose.
+ * Filters dictionary names that double as ordinary English words in prose.
  */
-function isAmbiguousUppercaseName(value: string): boolean {
-  return value === value.toUpperCase() && AMBIGUOUS_UPPERCASE_NAMES.has(value);
+function isAmbiguousNameMatch(value: string): boolean {
+  return AMBIGUOUS_NAME_MATCHES.has(value.toLowerCase());
 }
 
 /**

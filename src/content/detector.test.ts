@@ -113,10 +113,20 @@ describe("scanDocument", () => {
     expect(results.some((token) => token.text === "DASH")).toBe(false);
   });
 
-  it("prefers structured matches over overlapping name candidates", () => {
+  it("skips common-word token names in ordinary prose", () => {
     const results = scanDocument(
       createTextNodes(
-        "Contact vitalik.eth and review 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 before buying Solana.",
+        "The rain in Spain kept everyone inside while the forecast got worse.",
+      ),
+    );
+
+    expect(results.some((token) => token.text.toLowerCase() === "rain")).toBe(false);
+  });
+
+  it("prefers longer overlapping names while preserving structured matcher precedence", () => {
+    const results = scanDocument(
+      createTextNodes(
+        "Contact vitalik.eth about Bitcoin Cash before sending to 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045.",
       ),
     );
 
@@ -126,15 +136,17 @@ describe("scanDocument", () => {
         type: "ens",
       }),
       expect.objectContaining({
+        text: "Bitcoin Cash",
+        type: "name",
+        ticker: "BCH",
+        coingeckoId: "bitcoin-cash",
+      }),
+      expect.objectContaining({
         text: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
         type: "address",
         chain: "ethereum",
       }),
-      expect.objectContaining({
-        text: "Solana",
-        type: "name",
-        ticker: "SOL",
-      }),
     ]);
+    expect(results.some((token) => token.text === "Bitcoin")).toBe(false);
   });
 });
