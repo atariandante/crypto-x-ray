@@ -57,6 +57,15 @@ function isSearchTokenPayload(
   return isRecord(payload) && typeof payload.query === "string";
 }
 
+/**
+ * Narrows risk-assessment payloads received over the extension message bus.
+ */
+function isRiskAssessmentPayload(
+  payload: unknown,
+): payload is { id: string } | { address: string; chain: Chain } {
+  return isResolveTokenPayload(payload) || isResolveAddressPayload(payload);
+}
+
 // ---------- Message handler ----------
 
 chrome.runtime.onMessage.addListener(
@@ -89,6 +98,11 @@ export async function handleMessage(message: Message): Promise<MessageResponse> 
       return isSearchTokenPayload(message.payload)
         ? searchToken(message.payload)
         : { success: false, error: "Invalid SEARCH_TOKEN payload" };
+
+    case "GET_RISK_ASSESSMENT":
+      return isRiskAssessmentPayload(message.payload)
+        ? getRiskAssessment(message.payload)
+        : { success: false, error: "Invalid GET_RISK_ASSESSMENT payload" };
 
     case "GET_SETTINGS":
     case "UPDATE_SETTINGS":
@@ -168,6 +182,15 @@ async function searchToken(payload: {
     return { success: true, data: profile };
   }
   return { success: false, error: "Token not found" };
+}
+
+async function getRiskAssessment(payload: {
+  id: string;
+} | {
+  address: string;
+  chain: Chain;
+}): Promise<MessageResponse<{ profile: TokenProfile; risk: RiskAssessment }>> {
+  return "id" in payload ? resolveToken(payload) : resolveAddress(payload);
 }
 
 /**

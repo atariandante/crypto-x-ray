@@ -395,6 +395,7 @@ export const CACHE_TTL = {
 export type MessageType =
   | "RESOLVE_TOKEN"
   | "RESOLVE_ADDRESS"
+  | "GET_RISK_ASSESSMENT"
   | "GET_SETTINGS"
   | "UPDATE_SETTINGS"
   | "SEARCH_TOKEN";

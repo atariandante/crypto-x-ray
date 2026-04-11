@@ -28,6 +28,7 @@ export function highlightDetectedTerms(nodes: Text[]): number {
       highlightRanges(
         node,
         matches.map((match) => ({
+          detection: match.detection,
           end: match.end,
           start: match.start,
           text: match.detection.text,

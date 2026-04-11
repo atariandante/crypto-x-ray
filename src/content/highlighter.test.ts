@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { highlightNodes, removeAllHighlights } from "./highlighter";
+import { highlightNodes, highlightRanges, removeAllHighlights } from "./highlighter";
 
 describe("highlightNodes", () => {
   beforeEach(() => {
@@ -84,5 +84,42 @@ describe("removeAllHighlights", () => {
     removeAllHighlights();
     expect(document.body.querySelectorAll(".crypto-xray-highlight")).toHaveLength(0);
     expect(document.body.textContent).toBe("$SOL is great");
+  });
+});
+
+describe("highlightRanges", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("stores detector metadata on highlight spans", () => {
+    const text = document.createTextNode("Track Ethereum.");
+    document.body.appendChild(text);
+
+    const highlighted = highlightRanges(text, [
+      {
+        start: 6,
+        end: 14,
+        text: "Ethereum",
+        detection: {
+          text: "Ethereum",
+          type: "name",
+          ticker: "ETH",
+          coingeckoId: "ethereum",
+          confidence: 0.92,
+        },
+      },
+    ]);
+
+    expect(highlighted).toBe(true);
+    const span = document.querySelector(".crypto-xray-highlight") as HTMLSpanElement;
+    expect(span.dataset.entityType).toBe("name");
+    expect(span.dataset.coingeckoId).toBe("ethereum");
+    expect(span.dataset.ticker).toBe("ETH");
+    expect(span.dataset.confidence).toBe("0.92");
   });
 });
