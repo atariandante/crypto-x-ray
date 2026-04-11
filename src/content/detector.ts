@@ -27,6 +27,14 @@ interface SpanMatch extends Span {
   detection: DetectedToken;
 }
 
+/**
+ * Associates an accepted detection with the source text node and exact offsets.
+ */
+export interface DetectedTextMatch extends Span {
+  detection: DetectedToken;
+  node: Text;
+}
+
 interface NamePattern {
   coingeckoId: string;
   pattern: RegExp;
@@ -51,7 +59,14 @@ const NAME_PATTERNS: NamePattern[] = TOKEN_DICTIONARY_DATA.map((entry) => ({
  * content script can highlight stable, non-overlapping detections.
  */
 export function scanDocument(textNodes: Text[]): DetectedToken[] {
-  const detections: DetectedToken[] = [];
+  return scanDocumentMatches(textNodes).map((match) => match.detection);
+}
+
+/**
+ * Scans visible text nodes and keeps the accepted match offsets for exact highlighting.
+ */
+export function scanDocumentMatches(textNodes: Text[]): DetectedTextMatch[] {
+  const matches: DetectedTextMatch[] = [];
 
   for (const node of textNodes) {
     const text = node.textContent;
@@ -81,10 +96,10 @@ export function scanDocument(textNodes: Text[]): DetectedToken[] {
     acceptMatches(accepted, occupied, sortMatchesForAcceptance(collectNameMatches(text)));
 
     accepted.sort((left, right) => left.start - right.start || left.end - right.end);
-    detections.push(...accepted.map((match) => match.detection));
+    matches.push(...accepted.map((match) => ({ ...match, node })));
   }
 
-  return detections;
+  return matches;
 }
 
 /**
@@ -156,7 +171,7 @@ function collectNameMatches(text: string): SpanMatch[] {
       const value = match[2];
       const start = match.index + match[1].length;
       const end = start + value.length;
-      if (!isAcceptedNameMatch(text, start, end, namePattern)) {
+      if (!isAcceptedNameMatch(text, start, end, namePattern, value)) {
         continue;
       }
 
@@ -226,8 +241,9 @@ function isAcceptedNameMatch(
   start: number,
   end: number,
   namePattern: NamePattern,
+  value: string,
 ): boolean {
-  if (!namePattern.requiresCryptoContext) {
+  if (!namePattern.requiresCryptoContext && !isUppercaseNameMatch(value)) {
     return true;
   }
 
@@ -263,6 +279,13 @@ function hasNearbyCryptoContext(text: string, start: number, end: number): boole
  */
 function isSingleWordAlphabetic(value: string): boolean {
   return /^[A-Za-z]+$/.test(value);
+}
+
+/**
+ * Treats all-uppercase single-word names as ambiguous unless nearby crypto context disambiguates them.
+ */
+function isUppercaseNameMatch(value: string): boolean {
+  return isSingleWordAlphabetic(value) && value === value.toUpperCase();
 }
 
 /**

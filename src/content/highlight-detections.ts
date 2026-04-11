@@ -1,5 +1,5 @@
-import { scanDocument } from "./detector";
-import { highlightNodes } from "./highlighter";
+import { scanDocumentMatches } from "./detector";
+import { highlightRanges } from "./highlighter";
 
 /**
  * Highlights detector-approved terms one node at a time so acceptance decisions
@@ -10,16 +10,32 @@ import { highlightNodes } from "./highlighter";
  */
 export function highlightDetectedTerms(nodes: Text[]): number {
   let highlighted = 0;
+  const matchesByNode = new Map<Text, ReturnType<typeof scanDocumentMatches>>();
+
+  for (const match of scanDocumentMatches(nodes)) {
+    const nodeMatches = matchesByNode.get(match.node) ?? [];
+    nodeMatches.push(match);
+    matchesByNode.set(match.node, nodeMatches);
+  }
 
   for (const node of nodes) {
-    const detections = scanDocument([node]);
-    const terms = [...new Set(detections.map((detection) => detection.text))];
-
-    if (terms.length === 0) {
+    const matches = matchesByNode.get(node);
+    if (!matches?.length) {
       continue;
     }
 
-    highlighted += highlightNodes([node], terms);
+    if (
+      highlightRanges(
+        node,
+        matches.map((match) => ({
+          end: match.end,
+          start: match.start,
+          text: match.detection.text,
+        })),
+      )
+    ) {
+      highlighted++;
+    }
   }
 
   return highlighted;

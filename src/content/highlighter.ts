@@ -15,6 +15,15 @@ const HIGHLIGHT_STYLE: Partial<CSSStyleDeclaration> = {
 };
 
 /**
+ * Exact text range accepted by the detector for a given text node.
+ */
+export interface HighlightRange {
+  end: number;
+  start: number;
+  text: string;
+}
+
+/**
  * Creates a highlight span with inline styles.
  * @param text - The text content to highlight
  * @returns A styled span element
@@ -116,6 +125,35 @@ export function highlightNodes(nodes: Text[], terms: string[]): number {
   }
 
   return count;
+}
+
+/**
+ * Highlights precomputed exact ranges in a single text node without re-running matching logic.
+ */
+export function highlightRanges(node: Text, ranges: HighlightRange[]): boolean {
+  if (isAlreadyHighlighted(node) || ranges.length === 0) return false;
+
+  const text = node.textContent;
+  if (!text) return false;
+
+  const fragment = document.createDocumentFragment();
+  let lastIndex = 0;
+
+  for (const range of [...ranges].sort((left, right) => left.start - right.start)) {
+    if (range.start > lastIndex) {
+      fragment.appendChild(document.createTextNode(text.slice(lastIndex, range.start)));
+    }
+
+    fragment.appendChild(createHighlightSpan(range.text));
+    lastIndex = range.end;
+  }
+
+  if (lastIndex < text.length) {
+    fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+
+  node.parentNode?.replaceChild(fragment, node);
+  return true;
 }
 
 /**

@@ -131,6 +131,12 @@ describe("scanDocument", () => {
     expect(results.some((token) => token.text === "Canton")).toBe(false);
   });
 
+  it("skips top-ranked ambiguous names in ordinary prose", () => {
+    const results = scanDocument(createTextNodes("TRON Legacy is still a cult movie."));
+
+    expect(results.some((token) => token.text === "TRON")).toBe(false);
+  });
+
   it("detects ambiguous token names when nearby crypto context disambiguates them", () => {
     const results = scanDocument(
       createTextNodes("Rain token holders tracked the protocol after the exchange listing."),
