@@ -1,6 +1,10 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { getVisibleTextNodes, startDynamicPageScanner } from "./text-scanner";
+import {
+  getVisibleTextNodes,
+  startDynamicPageScanner,
+  type DynamicScanEvent,
+} from "./text-scanner";
 
 function createMockElement(
   tag: string,
@@ -161,38 +165,150 @@ describe("getVisibleTextNodes", () => {
 describe("startDynamicPageScanner", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     document.body.innerHTML = "";
+    vi.useRealTimers();
   });
 
   it("returns a cleanup function", () => {
     const callback = vi.fn();
-    const stop = startDynamicPageScanner(callback, 100);
+    const stop = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
     expect(typeof stop).toBe("function");
     stop();
   });
 
   it("does not call callback after cleanup", () => {
     const callback = vi.fn();
-    const stop = startDynamicPageScanner(callback, 100);
+    const stop = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
     stop();
 
     const text = createText("After cleanup");
     document.body.appendChild(text);
+    vi.advanceTimersByTime(150);
 
     expect(callback).not.toHaveBeenCalled();
   });
 
   it("does not start duplicate observers", () => {
     const callback = vi.fn();
-    const stop1 = startDynamicPageScanner(callback, 100);
-    const stop2 = startDynamicPageScanner(callback, 100);
+    const stop1 = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
+    const stop2 = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
 
     expect(stop1).not.toBe(stop2);
     expect(stop2()).toBeUndefined();
 
     stop1();
+  });
+
+  it("emits incremental scans for newly added visible nodes", async () => {
+    const callback = vi.fn<[DynamicScanEvent], void>();
+    const stop = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
+
+    document.body.appendChild(createText("Dynamic $SOL node"));
+    await Promise.resolve();
+    vi.advanceTimersByTime(100);
+
+    expect(callback).toHaveBeenCalledWith({
+      type: "incremental",
+      nodes: [expect.any(Text)],
+    });
+    const event = callback.mock.calls[0]?.[0];
+    expect(event?.type).toBe("incremental");
+    if (event?.type === "incremental") {
+      expect(event.nodes[0]?.textContent).toBe("Dynamic $SOL node");
+    }
+
+    stop();
+  });
+
+  it("deduplicates rapid mutations for the same text node", async () => {
+    const callback = vi.fn<[DynamicScanEvent], void>();
+    const stop = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
+    const wrapper = document.createElement("div");
+    const text = createText("Repeated $ETH node");
+    wrapper.appendChild(text);
+    document.body.appendChild(wrapper);
+    await Promise.resolve();
+
+    wrapper.removeChild(text);
+    wrapper.appendChild(text);
+    await Promise.resolve();
+    vi.advanceTimersByTime(100);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+    const event = callback.mock.calls[0]?.[0];
+    expect(event?.type).toBe("incremental");
+    if (event?.type === "incremental") {
+      expect(event.nodes).toHaveLength(1);
+    }
+
+    stop();
+  });
+
+  it("skips already highlighted nodes during mutation scans", async () => {
+    const callback = vi.fn<[DynamicScanEvent], void>();
+    const stop = startDynamicPageScanner(callback, { debounceMs: 100, throttleMs: 100 });
+    const span = document.createElement("span");
+    span.className = "crypto-xray-highlight";
+    span.appendChild(createText("$BTC"));
+    document.body.appendChild(span);
+
+    await Promise.resolve();
+    vi.advanceTimersByTime(100);
+
+    expect(callback).not.toHaveBeenCalled();
+
+    stop();
+  });
+
+  it("throttles dynamic scans to at most one dispatch per throttle window", async () => {
+    const callback = vi.fn<[DynamicScanEvent], void>();
+    const stop = startDynamicPageScanner(callback, { debounceMs: 50, throttleMs: 500 });
+
+    document.body.appendChild(createText("First node"));
+    await Promise.resolve();
+    vi.advanceTimersByTime(50);
+
+    document.body.appendChild(createText("Second node"));
+    await Promise.resolve();
+    vi.advanceTimersByTime(50);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(450);
+
+    expect(callback).toHaveBeenCalledTimes(2);
+    expect(callback.mock.calls[1]?.[0]?.type).toBe("incremental");
+
+    stop();
+  });
+
+  it("requests a full re-scan when history navigation changes the URL", async () => {
+    const callback = vi.fn<[DynamicScanEvent], void>();
+    const stop = startDynamicPageScanner(callback, { debounceMs: 50, throttleMs: 100 });
+
+    history.pushState({}, "", "/next-page");
+    await Promise.resolve();
+    vi.advanceTimersByTime(100);
+
+    expect(callback).toHaveBeenCalledWith({ type: "full" });
+
+    stop();
+  });
+
+  it("requests a full re-scan on popstate", async () => {
+    const callback = vi.fn<[DynamicScanEvent], void>();
+    const stop = startDynamicPageScanner(callback, { debounceMs: 50, throttleMs: 100 });
+
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    await Promise.resolve();
+    vi.advanceTimersByTime(100);
+
+    expect(callback).toHaveBeenCalledWith({ type: "full" });
+
+    stop();
   });
 });
