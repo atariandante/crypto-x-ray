@@ -116,11 +116,11 @@ describe("scanDocument", () => {
   it("skips common-word token names in ordinary prose", () => {
     const results = scanDocument(
       createTextNodes(
-        "The rain in Spain kept everyone inside while the forecast got worse.",
+        "The render finished before sunrise while the team reviewed the mockup.",
       ),
     );
 
-    expect(results.some((token) => token.text.toLowerCase() === "rain")).toBe(false);
+    expect(results.some((token) => token.text.toLowerCase() === "render")).toBe(false);
   });
 
   it("detects ambiguous token names when nearby crypto context disambiguates them", () => {
@@ -135,6 +135,21 @@ describe("scanDocument", () => {
         type: "name",
         ticker: "RAIN",
         coingeckoId: "rain",
+      },
+      0.9,
+    );
+  });
+
+  it("detects ambiguous token names when nearby crypto context appears before the name", () => {
+    const results = scanDocument(createTextNodes("Token Dash rallied today."));
+
+    expectDetection(
+      results,
+      {
+        text: "Dash",
+        type: "name",
+        ticker: "DASH",
+        coingeckoId: "dash",
       },
       0.9,
     );

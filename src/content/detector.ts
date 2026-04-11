@@ -5,7 +5,7 @@ const ENS_PATTERN = /\b[a-z0-9-]+\.eth\b/gi;
 const EVM_ADDRESS_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g;
 const SOLANA_ADDRESS_PATTERN = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g;
 const TICKER_PATTERN = /(^|[^A-Za-z0-9])(\$[A-Z]{2,5})(?=$|[^A-Za-z0-9])/g;
-const AMBIGUOUS_NAME_MATCHES = new Set(["dash", "rain"]);
+const NAME_CONTEXT_REQUIRED_RANK_THRESHOLD = 25;
 const CRYPTO_CONTEXT_WORD_PATTERN =
   "\\b(token|tokens|coin|coins|crypto|blockchain|protocol|wallet|wallets|address|addresses|chain|network|market|markets|price|prices|chart|charts|holder|holders|trader|traders|trading|exchange|exchanges|defi|dex|staking|liquidity|airdrop|listing|supply)\\b";
 const BEFORE_CRYPTO_CONTEXT_PATTERN = new RegExp(
@@ -29,6 +29,7 @@ interface SpanMatch extends Span {
 interface NamePattern {
   coingeckoId: string;
   pattern: RegExp;
+  requiresCryptoContext: boolean;
   ticker: string;
 }
 
@@ -38,6 +39,7 @@ const NAME_PATTERNS: NamePattern[] = TOKEN_DICTIONARY_DATA.map((entry) => ({
     `(^|[^A-Za-z0-9])(${escapePattern(entry.name)})(?=$|[^A-Za-z0-9])`,
     "gi",
   ),
+  requiresCryptoContext: requiresCryptoContext(entry.name, entry.marketCapRank),
   ticker: entry.symbol,
 }));
 
@@ -153,7 +155,7 @@ function collectNameMatches(text: string): SpanMatch[] {
       const value = match[2];
       const start = match.index + match[1].length;
       const end = start + value.length;
-      if (!isAcceptedNameMatch(text, start, end, value)) {
+      if (!isAcceptedNameMatch(text, start, end, namePattern)) {
         continue;
       }
 
@@ -218,12 +220,24 @@ function reserveSpan(match: Span, occupied: Span[]): boolean {
 /**
  * Accepts unambiguous names immediately and requires local crypto context for ambiguous ones.
  */
-function isAcceptedNameMatch(text: string, start: number, end: number, value: string): boolean {
-  if (!AMBIGUOUS_NAME_MATCHES.has(value.toLowerCase())) {
+function isAcceptedNameMatch(
+  text: string,
+  start: number,
+  end: number,
+  namePattern: NamePattern,
+): boolean {
+  if (!namePattern.requiresCryptoContext) {
     return true;
   }
 
   return hasNearbyCryptoContext(text, start, end);
+}
+
+/**
+ * Marks lower-ranked, single-word alphabetic names as context-sensitive.
+ */
+function requiresCryptoContext(name: string, marketCapRank: number): boolean {
+  return marketCapRank > NAME_CONTEXT_REQUIRED_RANK_THRESHOLD && isSingleWordAlphabetic(name);
 }
 
 /**
@@ -237,6 +251,13 @@ function hasNearbyCryptoContext(text: string, start: number, end: number): boole
     BEFORE_CRYPTO_CONTEXT_PATTERN.test(beforeContext) ||
     AFTER_CRYPTO_CONTEXT_PATTERN.test(afterContext)
   );
+}
+
+/**
+ * Identifies plain single-word alphabetic names that are more likely to appear in prose.
+ */
+function isSingleWordAlphabetic(value: string): boolean {
+  return /^[A-Za-z]+$/.test(value);
 }
 
 /**
