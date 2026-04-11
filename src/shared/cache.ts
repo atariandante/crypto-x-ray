@@ -60,6 +60,26 @@ export async function setCached<T>(
 }
 
 /**
+ * Reads through the cache and only invokes the fetcher on cache miss.
+ * This keeps API clients focused on provider-specific mapping while the cache
+ * layer owns the common cache-first control flow.
+ */
+export async function withCache<T>(
+  key: string,
+  ttl: number,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  const cached = await getCached<T>(key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  const data = await fetcher();
+  await setCached(key, data, ttl);
+  return data;
+}
+
+/**
  * Removes a single cached item by logical cache key.
  */
 export async function removeCached(key: string): Promise<void> {

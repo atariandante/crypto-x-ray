@@ -1,4 +1,4 @@
-import { getCached, setCached } from "../cache";
+import { getCached, setCached, withCache } from "../cache";
 import { ApiName, getRateLimiter } from "../rate-limiter";
 import {
   CACHE_TTL,
@@ -82,17 +82,13 @@ function mapSummary(response: RugCheckSummaryResponse): RugCheckSummary {
 export async function fetchTokenSummary(
   mint: string,
 ): Promise<RugCheckSummary | null> {
-  const cacheKey = `rugcheck:summary:${mint}`;
-  const cached = await getCached<RugCheckSummary>(cacheKey);
-  if (cached) return cached;
-
   try {
-    const response = await fetchJson<RugCheckSummaryResponse>(
-      `${BASE_URL}/${mint}/report/summary`,
-    );
-    const summary = mapSummary(response);
-    await setCached(cacheKey, summary, CACHE_TTL.RUGCHECK);
-    return summary;
+    return await withCache(`rugcheck:${mint}`, CACHE_TTL.RUGCHECK, async () => {
+      const response = await fetchJson<RugCheckSummaryResponse>(
+        `${BASE_URL}/${mint}/report/summary`,
+      );
+      return mapSummary(response);
+    });
   } catch (error) {
     if (error instanceof Error && error.message.includes("404")) {
       return null;

@@ -10,12 +10,33 @@ import {
 } from "./defi-llama";
 
 // Mock chrome.storage.local
+const storage: Record<string, unknown> = {};
+
 vi.stubGlobal("chrome", {
   storage: {
     local: {
-      get: vi.fn(() => Promise.resolve({})),
-      set: vi.fn(() => Promise.resolve()),
-      remove: vi.fn(() => Promise.resolve()),
+      get: vi.fn((keys: string | string[] | null) => {
+        const result: Record<string, unknown> = {};
+        const keyList =
+          typeof keys === "string"
+            ? [keys]
+            : keys === null
+              ? Object.keys(storage)
+              : keys;
+        for (const key of keyList) {
+          if (key in storage) result[key] = storage[key];
+        }
+        return Promise.resolve(result);
+      }),
+      set: vi.fn((items: Record<string, unknown>) => {
+        Object.assign(storage, items);
+        return Promise.resolve();
+      }),
+      remove: vi.fn((keys: string | string[]) => {
+        const keyList = typeof keys === "string" ? [keys] : keys;
+        for (const key of keyList) delete storage[key];
+        return Promise.resolve();
+      }),
     },
   },
 });
@@ -25,6 +46,7 @@ vi.stubGlobal("fetch", mockFetch);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const key of Object.keys(storage)) delete storage[key];
 });
 
 describe("defi-llama", () => {
@@ -61,6 +83,30 @@ describe("defi-llama", () => {
 
       expect(prices["coingecko:aave"].price).toBe(250);
       expect(prices["coingecko:aave"].confidence).toBe(0.99);
+      expect(storage).toHaveProperty("cxr_price:coingecko:aave");
+    });
+
+    it("returns cached prices without refetching", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            coins: {
+              "coingecko:aave": {
+                price: 250,
+                symbol: "AAVE",
+                timestamp: 1700000000,
+                confidence: 0.99,
+              },
+            },
+          }),
+      });
+
+      await fetchPrices(["coingecko:aave"]);
+      const prices = await fetchPrices(["coingecko:aave"]);
+
+      expect(prices["coingecko:aave"].price).toBe(250);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -240,6 +286,7 @@ describe("defi-llama", () => {
       expect(fundamentals!.tvlTrend).toBe("growing");
       expect(fundamentals!.revenueUsd).toBeGreaterThan(0);
       expect(fundamentals!.revenueTrend).toBe("growing");
+      expect(storage).toHaveProperty("cxr_fundamentals:aave");
     });
   });
 });

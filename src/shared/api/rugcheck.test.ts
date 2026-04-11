@@ -1,12 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchTokenReport, fetchTokenSummary } from "./rugcheck";
 
+const storage: Record<string, unknown> = {};
+
 vi.stubGlobal("chrome", {
   storage: {
     local: {
-      get: vi.fn(() => Promise.resolve({})),
-      set: vi.fn(() => Promise.resolve()),
-      remove: vi.fn(() => Promise.resolve()),
+      get: vi.fn((keys: string | string[] | null) => {
+        const result: Record<string, unknown> = {};
+        const keyList =
+          typeof keys === "string"
+            ? [keys]
+            : keys === null
+              ? Object.keys(storage)
+              : keys;
+        for (const key of keyList) {
+          if (key in storage) result[key] = storage[key];
+        }
+        return Promise.resolve(result);
+      }),
+      set: vi.fn((items: Record<string, unknown>) => {
+        Object.assign(storage, items);
+        return Promise.resolve();
+      }),
+      remove: vi.fn((keys: string | string[]) => {
+        const keyList = typeof keys === "string" ? [keys] : keys;
+        for (const key of keyList) delete storage[key];
+        return Promise.resolve();
+      }),
     },
   },
 });
@@ -16,6 +37,7 @@ vi.stubGlobal("fetch", mockFetch);
 
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const key of Object.keys(storage)) delete storage[key];
 });
 
 describe("rugcheck", () => {
@@ -64,6 +86,33 @@ describe("rugcheck", () => {
           },
         ],
       });
+      expect(storage).toHaveProperty(
+        "cxr_rugcheck:So11111111111111111111111111111111111111112",
+      );
+    });
+
+    it("returns cached summaries without refetching", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            mint: "So11111111111111111111111111111111111111112",
+            score: 1234,
+            score_normalised: 87,
+            tokenProgram: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            tokenType: "spl",
+            lpLockedPct: 91.2,
+            risks: [],
+          }),
+      });
+
+      await fetchTokenSummary("So11111111111111111111111111111111111111112");
+      const summary = await fetchTokenSummary(
+        "So11111111111111111111111111111111111111112",
+      );
+
+      expect(summary?.mint).toBe("So11111111111111111111111111111111111111112");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
 
     it("returns null for not-found tokens", async () => {

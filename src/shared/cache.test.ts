@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { getCached, setCached, removeCached, clearExpired } from "./cache";
+import {
+  clearExpired,
+  getCached,
+  removeCached,
+  setCached,
+  withCache,
+} from "./cache";
 
 // Mock chrome.storage.local
 const storage: Record<string, unknown> = {};
@@ -76,6 +82,31 @@ describe("cache", () => {
     await setCached("mykey", "value", 60_000);
     expect(mockChromeStorage.set).toHaveBeenCalledWith(
       expect.objectContaining({ cxr_mykey: expect.anything() }),
+    );
+  });
+
+  it("withCache returns cached data without calling the fetcher", async () => {
+    await setCached("price:ethereum", { usd: 3500 }, 60_000);
+    const fetcher = vi.fn(async () => ({ usd: 3600 }));
+
+    const result = await withCache("price:ethereum", 60_000, fetcher);
+
+    expect(result).toEqual({ usd: 3500 });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("withCache stores fetched data on a cache miss", async () => {
+    const fetcher = vi.fn(async () => ({ tvl: 123 }));
+
+    const result = await withCache("fundamentals:aave", 60_000, fetcher);
+
+    expect(result).toEqual({ tvl: 123 });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(storage["cxr_fundamentals:aave"]).toEqual(
+      expect.objectContaining({
+        data: { tvl: 123 },
+        ttl: 60_000,
+      }),
     );
   });
 });

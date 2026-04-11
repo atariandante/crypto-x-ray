@@ -11,12 +11,28 @@ const storage: Record<string, unknown> = {};
 vi.stubGlobal("chrome", {
   storage: {
     local: {
-      get: vi.fn(() => Promise.resolve({})),
+      get: vi.fn((keys: string | string[] | null) => {
+        const result: Record<string, unknown> = {};
+        const keyList =
+          typeof keys === "string"
+            ? [keys]
+            : keys === null
+              ? Object.keys(storage)
+              : keys;
+        for (const key of keyList) {
+          if (key in storage) result[key] = storage[key];
+        }
+        return Promise.resolve(result);
+      }),
       set: vi.fn((items: Record<string, unknown>) => {
         Object.assign(storage, items);
         return Promise.resolve();
       }),
-      remove: vi.fn(() => Promise.resolve()),
+      remove: vi.fn((keys: string | string[]) => {
+        const keyList = typeof keys === "string" ? [keys] : keys;
+        for (const key of keyList) delete storage[key];
+        return Promise.resolve();
+      }),
     },
   },
 });
@@ -96,7 +112,7 @@ describe("coingecko", () => {
       expect(profile.supply.type).toBe("fixed");
     });
 
-    it("caches the result", async () => {
+    it("stores token profiles using the token:{id} cache key", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(MOCK_COIN_RESPONSE),
@@ -104,9 +120,24 @@ describe("coingecko", () => {
 
       await fetchTokenById("ethereum");
 
-      // Verify cache was written
-      const cacheKeys = Object.keys(storage);
-      expect(cacheKeys.some((k) => k.includes("coin:ethereum"))).toBe(true);
+      expect(storage["cxr_token:ethereum"]).toEqual(
+        expect.objectContaining({
+          data: expect.objectContaining({ id: "ethereum" }),
+        }),
+      );
+    });
+
+    it("returns cached token profiles without refetching", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(MOCK_COIN_RESPONSE),
+      });
+
+      await fetchTokenById("ethereum");
+      const profile = await fetchTokenById("ethereum");
+
+      expect(profile.name).toBe("Ethereum");
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -134,6 +165,9 @@ describe("coingecko", () => {
 
       expect(profile).not.toBeNull();
       expect(profile!.name).toBe("Ethereum");
+      expect(storage).toHaveProperty(
+        "cxr_token:ethereum:0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      );
     });
   });
 
@@ -152,6 +186,7 @@ describe("coingecko", () => {
 
       expect(prices.ethereum.usd).toBe(3500);
       expect(prices.bitcoin.usd).toBe(65000);
+      expect(storage).toHaveProperty("cxr_price:ethereum,bitcoin");
     });
   });
 
