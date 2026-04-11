@@ -112,4 +112,29 @@ describe("scanDocument", () => {
 
     expect(results.some((token) => token.text === "DASH")).toBe(false);
   });
+
+  it("prefers structured matches over overlapping name candidates", () => {
+    const results = scanDocument(
+      createTextNodes(
+        "Contact vitalik.eth and review 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045 before buying Solana.",
+      ),
+    );
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        text: "vitalik.eth",
+        type: "ens",
+      }),
+      expect.objectContaining({
+        text: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        type: "address",
+        chain: "ethereum",
+      }),
+      expect.objectContaining({
+        text: "Solana",
+        type: "name",
+        ticker: "SOL",
+      }),
+    ]);
+  });
 });
