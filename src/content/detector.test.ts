@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { beforeEach, afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { scanDocument } from "./detector";
 import type { DetectedToken } from "@/shared/types";
 
@@ -29,14 +29,6 @@ function expectDetection(
 }
 
 describe("scanDocument", () => {
-  beforeEach(() => {
-    document.body.innerHTML = "";
-  });
-
-  afterEach(() => {
-    document.body.innerHTML = "";
-  });
-
   it("detects dictionary-backed tickers with high confidence", () => {
     const results = scanDocument(createTextNodes("Bullish on $SOL today."));
 
