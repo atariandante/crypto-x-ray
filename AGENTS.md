@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex and other coding agents when working with code in this repository.
 
 ## Overview
 
@@ -91,7 +91,7 @@ The extension follows Chrome Manifest V3 with three main execution contexts:
 
 ### Data Flow
 
-```
+```text
 Content Script
   ↓
   scanDocument() → detects tokens, addresses, ENS domains
@@ -164,7 +164,7 @@ Smart routing: Prices route through DeFiLlama (generous limits) to preserve Coin
 
 ### Risk Assessment System
 
-The insight engine uses a **unified RiskProvider interface** pattern. The engine is fully provider-agnostic — each data source implements a single interface.
+The insight engine uses a **unified RiskProvider interface** pattern. The engine is fully provider-agnostic. Each data source implements a single interface.
 
 **Core types** (`src/shared/risk/types.ts`):
 
@@ -249,81 +249,11 @@ Risk types in `src/shared/risk/types.ts`:
 ### Debugging the Content Script
 
 - Open DevTools on any page
-- Errors from the content script appear in the **page's DevTools console** (not extension DevTools)
-- Use `console.log()` in content script code; watch the page console
+- Errors from the content script appear in the page's DevTools console, not extension DevTools
+- Use `console.log()` in content script code and watch the page console
 
 ### Debugging the Background Service Worker
 
 1. Go to `chrome://extensions/`
-2. Find Crypto X-Ray → click "Inspect views: background.html"
+2. Find Crypto X-Ray and click "Inspect views: background.html"
 3. This opens the service worker's DevTools
-
-### Adding a New API Client
-
-1. Create `src/shared/api/newapi.ts` with async functions
-2. Implement caching using `withCache()` from `cache.ts`
-3. Add to service worker message handler
-4. Update `MessageType` in `types.ts` if needed
-5. Add host permission to `manifest.json`
-
-### Adding a New RiskProvider
-
-1. Create `src/shared/risk/providers/myprovider.ts` implementing `RiskProvider`
-2. Implement `canHandle(entity)` — return true for entities this provider supports
-3. Implement `getInsights(entity)` — fetch data and return `RiskInsight[]`
-4. Register in `src/background/index.ts`: `engine.register(new MyProvider())`
-5. Add unit tests in `src/shared/risk/providers/myprovider.test.ts`
-6. No changes to InsightEngine, content script, or UI needed
-
-### Running Tests
-
-Tests are **colocated** with source files. Tests use **Vitest** (configured via `tsconfig.json` and Vite).
-
-```bash
-npm test                    # Run all tests once
-npm test -- --coverage      # With coverage report
-npm test:watch              # Watch mode
-
-# Integration tests (hit live APIs)
-npx vitest run src/shared/api/coingecko.integration.test.ts
-npx vitest run src/shared/api/defi-llama.integration.test.ts
-npx vitest run src/shared/api/rugcheck.integration.test.ts
-```
-
-## Key Dependencies
-
-- **React 18.3**: UI rendering in popup, options, and tooltip overlays
-- **Vite 5.3**: Module bundler and dev server
-- **TypeScript 5.5**: Strict type checking (enabled)
-- **Tailwind 3.4**: Utility CSS
-- **@types/chrome**: Chrome Extension API types
-- **Vitest**: Unit testing framework
-- **ESLint + Prettier**: Code quality and formatting
-
-## Notes for Implementation
-
-- **Shadow DOM Usage**: Tooltip overlays use Shadow DOM to prevent style leaks into host pages
-- **Inline Styles**: Highlight spans use inline styles (not CSS classes) for CSP compatibility on strict sites
-- **Message Passing**: Content script ↔ Background worker uses `chrome.runtime.sendMessage()` with type-safe `Message` interface
-- **Provider Isolation**: Content script and UI components must NEVER import from `src/shared/api/` or `src/shared/risk/providers/`. They only consume `RiskAssessment` and `TokenProfile` types
-- **Rate Limiting**: Service worker should throttle API calls; implement exponential backoff for rate limits
-- **Chain Context**: Always infer chain when analyzing addresses; different chains have different contract standards
-- **Tier 1 Dictionary**: Top 200+ tokens by market cap — regenerate with `scripts/update-dictionary.ts`
-- **JSDoc**: All exported functions and non-trivial private helpers must have JSDoc comments with `@param`, `@returns`, and a description
-
-## Milestone 1 — Active Issues
-
-| # | Title | Labels |
-|---|-------|--------|
-| [#3](https://github.com/atariandante/crypto-x-ray/issues/3) | Finalize entity detection engine | core, content-script |
-| [#4](https://github.com/atariandante/crypto-x-ray/issues/4) | Implement highlight injection system | content-script, ui |
-| [#5](https://github.com/atariandante/crypto-x-ray/issues/5) | Set up background messaging pipeline | background, core |
-| [#6](https://github.com/atariandante/crypto-x-ray/issues/6) | Integrate token data providers (dictionary + RugCheck) | data, background |
-| [#7](https://github.com/atariandante/crypto-x-ray/issues/7) | Implement caching layer | data |
-| [#8](https://github.com/atariandante/crypto-x-ray/issues/8) | Build tooltip UI | ui, content-script |
-| [#9](https://github.com/atariandante/crypto-x-ray/issues/9) | Implement insight engine with unified RiskProvider interface | core |
-| [#10](https://github.com/atariandante/crypto-x-ray/issues/10) | Add debounced DOM observer | content-script |
-| [#11](https://github.com/atariandante/crypto-x-ray/issues/11) | Reduce false positives in detection | core, content-script |
-| [#12](https://github.com/atariandante/crypto-x-ray/issues/12) | Validate UX on real-world sites | content-script, ui |
-
-**Execution order**: #6 → #3 → #7 → #4 → #5 → #9 → #8 → #10 → #11 → #12

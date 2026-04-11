@@ -8,3 +8,4 @@ dist/
 .idea/
 coverage/
 .worktrees/
+docs/superpowers/
