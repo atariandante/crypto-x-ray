@@ -9,6 +9,10 @@ import {
   formatCoinId,
 } from "../shared/api/defi-llama";
 import { clearExpired } from "../shared/cache";
+import { InsightEngine } from "../shared/risk/engine";
+import { InternalHeuristicsProvider } from "../shared/risk/providers/internal";
+import { RugCheckProvider } from "../shared/risk/providers/rugcheck";
+import type { RiskAssessment } from "../shared/risk/types";
 import type {
   Chain,
   Message,
@@ -69,7 +73,7 @@ chrome.runtime.onMessage.addListener(
   },
 );
 
-async function handleMessage(message: Message): Promise<MessageResponse> {
+export async function handleMessage(message: Message): Promise<MessageResponse> {
   switch (message.type) {
     case "RESOLVE_TOKEN":
       return isResolveTokenPayload(message.payload)
@@ -100,7 +104,7 @@ async function handleMessage(message: Message): Promise<MessageResponse> {
 
 async function resolveToken(payload: {
   id: string;
-}): Promise<MessageResponse<TokenProfile>> {
+}): Promise<MessageResponse<{ profile: TokenProfile; risk: RiskAssessment }>> {
   const profile = await fetchTokenById(payload.id);
 
   // Enrich with DeFiLlama fundamentals (TVL, revenue)
@@ -117,13 +121,20 @@ async function resolveToken(payload: {
     profile.price = dlPrice.price;
   }
 
-  return { success: true, data: profile };
+  const risk = await createInsightEngine().getRiskAssessment({
+    type: "token",
+    identifier: profile.id,
+    chain: profile.chains[0],
+    tokenProfile: profile,
+  });
+
+  return { success: true, data: { profile, risk } };
 }
 
 async function resolveAddress(payload: {
   address: string;
   chain: Chain;
-}): Promise<MessageResponse<TokenProfile>> {
+}): Promise<MessageResponse<{ profile: TokenProfile; risk: RiskAssessment }>> {
   // Try CoinGecko contract lookup first (gives full profile)
   const profile = await fetchTokenByContract(payload.chain, payload.address);
   if (!profile) {
@@ -136,7 +147,14 @@ async function resolveAddress(payload: {
     profile.fundamentals = fundamentals;
   }
 
-  return { success: true, data: profile };
+  const risk = await createInsightEngine().getRiskAssessment({
+    type: "token",
+    identifier: payload.address,
+    chain: payload.chain,
+    tokenProfile: profile,
+  });
+
+  return { success: true, data: { profile, risk } };
 }
 
 async function searchToken(payload: {
@@ -150,6 +168,16 @@ async function searchToken(payload: {
     return { success: true, data: profile };
   }
   return { success: false, error: "Token not found" };
+}
+
+/**
+ * Builds the current set of risk providers for each background request.
+ */
+function createInsightEngine(): InsightEngine {
+  const engine = new InsightEngine();
+  engine.register(new RugCheckProvider());
+  engine.register(new InternalHeuristicsProvider());
+  return engine;
 }
 
 // ---------- Scheduled cache cleanup ----------
