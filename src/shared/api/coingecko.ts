@@ -61,10 +61,14 @@ async function fetchJSON<T>(url: string): Promise<T> {
     if (!response.ok) {
       throw new Error(`CoinGecko ${response.status}: ${url}`);
     }
-    return response.json() as Promise<T>;
+    return response.json();
   });
 }
 
+/**
+ * Infers the broad supply model from CoinGecko supply fields.
+ * The result feeds scoring without exposing raw provider-specific nullability.
+ */
 function inferSupplyType(
   _circulating: number,
   _total: number,
@@ -102,6 +106,9 @@ const CHAIN_TO_COINGECKO_PLATFORM: Record<Chain, string> = {
   avalanche: "avalanche-c-chain",
 };
 
+/**
+ * Maps CoinGecko platform identifiers onto the extension's chain enum.
+ */
 function mapChainFromPlatform(platformId: string): Chain | undefined {
   return COINGECKO_PLATFORM_TO_CHAIN[platformId];
 }
@@ -191,6 +198,10 @@ export async function fetchSimplePrices(
 
 // ---------- Mapping helpers ----------
 
+/**
+ * Normalizes a raw CoinGecko coin payload into the app's `TokenProfile`.
+ * This isolates provider field names and missing-value handling in one place.
+ */
 function mapCoinToProfile(coin: CoinGeckoCoin): TokenProfile {
   const md = coin.market_data;
   const circulating = md?.circulating_supply ?? 0;
@@ -238,6 +249,9 @@ function mapCoinToProfile(coin: CoinGeckoCoin): TokenProfile {
   };
 }
 
+/**
+ * Converts an internal chain name into the corresponding CoinGecko platform id.
+ */
 function chainToPlatformId(chain: Chain): string | null {
   return CHAIN_TO_COINGECKO_PLATFORM[chain] ?? null;
 }

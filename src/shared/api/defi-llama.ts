@@ -46,6 +46,33 @@ interface CoinPrice {
   decimals?: number;
 }
 
+/**
+ * Normalizes SDK price responses so callers always receive a numeric
+ * confidence field instead of handling provider-level optionality.
+ */
+function normalizeCoinPrices(
+  coins: Record<
+    string,
+    {
+      price: number;
+      symbol: string;
+      timestamp: number;
+      confidence?: number;
+      decimals?: number;
+    }
+  >,
+): Record<string, CoinPrice> {
+  return Object.fromEntries(
+    Object.entries(coins).map(([coinId, coin]) => [
+      coinId,
+      {
+        ...coin,
+        confidence: coin.confidence ?? 0,
+      },
+    ]),
+  );
+}
+
 // ---------- Public API ----------
 
 /**
@@ -61,7 +88,7 @@ export async function fetchPrices(
   if (cached) return cached;
 
   const data = await client.prices.getCurrentPrices(coinIds);
-  const coins = (data as { coins: Record<string, CoinPrice> }).coins;
+  const coins = normalizeCoinPrices(data.coins);
 
   await setCached(cacheKey, coins, CACHE_TTL.PRICE);
   return coins;
@@ -80,8 +107,9 @@ export async function fetchPriceChange(
   const cached = await getCached<Record<string, number>>(cacheKey);
   if (cached) return cached;
 
-  const data = await client.prices.getPercentageChange(coinIds, { period });
-  const coins = (data as { coins: Record<string, number> }).coins;
+  const data: { coins: Record<string, number> } =
+    await client.prices.getPercentageChange(coinIds, { period });
+  const coins = data.coins;
 
   await setCached(cacheKey, coins, CACHE_TTL.PRICE);
   return coins;
@@ -96,7 +124,7 @@ export async function fetchProtocols(): Promise<Protocol[]> {
   const cached = await getCached<Protocol[]>(cacheKey);
   if (cached) return cached;
 
-  const data = (await client.tvl.getProtocols()) as Protocol[];
+  const data: Protocol[] = await client.tvl.getProtocols();
 
   await setCached(cacheKey, data, CACHE_TTL.SUPPLY);
   return data;
@@ -107,7 +135,7 @@ interface Protocol {
   name: string;
   slug: string;
   symbol: string;
-  gecko_id: string | null;
+  gecko_id?: string | null;
   tvl: number;
   chain: string;
   chains: string[];
@@ -136,7 +164,7 @@ export async function fetchTvl(protocolSlug: string): Promise<number | null> {
   if (cached !== null) return cached;
 
   try {
-    const data = (await client.tvl.getTvl(protocolSlug)) as number;
+    const data: number = await client.tvl.getTvl(protocolSlug);
     await setCached(cacheKey, data, CACHE_TTL.SUPPLY);
     return data;
   } catch {
@@ -148,10 +176,10 @@ interface ProtocolDetail {
   id: string;
   name: string;
   symbol: string;
-  gecko_id: string | null;
+  gecko_id?: string | null;
   tvl: { date: number; totalLiquidityUSD: number }[];
   currentChainTvls: Record<string, number>;
-  category: string;
+  category?: string;
 }
 
 /**
@@ -165,9 +193,7 @@ export async function fetchProtocolDetail(
   if (cached) return cached;
 
   try {
-    const data = (await client.tvl.getProtocol(
-      protocolSlug,
-    )) as ProtocolDetail;
+    const data: ProtocolDetail = await client.tvl.getProtocol(protocolSlug);
     await setCached(cacheKey, data, CACHE_TTL.SUPPLY);
     return data;
   } catch {
@@ -183,7 +209,7 @@ interface FeeSummary {
   totalAllTime?: number | null;
   totalDataChart?: [number, number][];
   gecko_id?: string | null;
-  category?: string;
+  category?: string | null;
 }
 
 /**
@@ -197,9 +223,9 @@ export async function fetchFees(
   if (cached) return cached;
 
   try {
-    const data = (await client.fees.getSummary(protocolSlug, {
+    const data: FeeSummary = await client.fees.getSummary(protocolSlug, {
       dataType: "dailyRevenue",
-    })) as FeeSummary;
+    });
     await setCached(cacheKey, data, CACHE_TTL.SUPPLY);
     return data;
   } catch {
@@ -247,6 +273,10 @@ export async function fetchFundamentals(
 
 // ---------- Trend helpers ----------
 
+/**
+ * Buckets a numeric time series into a coarse trend classification.
+ * The heuristic keeps higher-level scoring code independent from raw deltas.
+ */
 function inferTrend(
   values: number[],
   lookback: number = TREND_LOOKBACK_DAYS,

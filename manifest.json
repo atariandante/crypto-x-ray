@@ -36,6 +36,7 @@
     "https://api.coingecko.com/*",
     "https://pro-api.coingecko.com/*",
     "https://api.llama.fi/*",
+    "https://api.rugcheck.xyz/*",
     "https://api.tokenomist.ai/*",
     "https://api.tokenterminal.com/*",
     "https://api.etherscan.io/*",

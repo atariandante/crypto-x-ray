@@ -1,4 +1,8 @@
-// Token/address/wallet resolver — maps detected text to identity
-// Path A: dictionary lookup, Path B: on-chain lookup, Path C: CoinGecko search
-// TODO: Implement in T-04
-export async function resolve() { return null; }
+/**
+ * Resolves detected entities into typed token or wallet profiles.
+ * The stub keeps callers wired to a stable async boundary before the full
+ * multi-provider resolution flow is implemented.
+ */
+export async function resolve() {
+  return null;
+}
