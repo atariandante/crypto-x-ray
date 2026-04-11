@@ -43,10 +43,14 @@ async function fetchJson<T>(url: string): Promise<T> {
     if (!response.ok) {
       throw new Error(`RugCheck ${response.status}: ${url}`);
     }
-    return response.json() as Promise<T>;
+    return response.json();
   });
 }
 
+/**
+ * Normalizes a raw RugCheck risk item into the shared risk shape used by the
+ * rest of the extension.
+ */
 function mapRisk(risk: RugCheckRiskResponse): RugCheckRisk {
   return {
     name: risk.name ?? "",
@@ -57,6 +61,9 @@ function mapRisk(risk: RugCheckRiskResponse): RugCheckRisk {
   };
 }
 
+/**
+ * Normalizes the shared summary fields that appear in both RugCheck endpoints.
+ */
 function mapSummary(response: RugCheckSummaryResponse): RugCheckSummary {
   return {
     mint: response.mint ?? "",

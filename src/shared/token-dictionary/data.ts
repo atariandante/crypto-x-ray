@@ -1,5 +1,9 @@
 import type { TokenDictionaryEntry } from "./types";
 
+/**
+ * Generated top-of-market token dataset used for zero-latency Tier 1 lookups.
+ * The file is checked in so content detection never depends on runtime fetches.
+ */
 export const TOKEN_DICTIONARY_DATA: TokenDictionaryEntry[] = [
   {
     "coingeckoId": "bitcoin",

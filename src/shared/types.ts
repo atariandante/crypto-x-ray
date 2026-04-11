@@ -2,8 +2,14 @@
 // Detection types — what the content script finds on the page
 // ============================================================
 
+/**
+ * Identifies which kind of entity the content script detected in page text.
+ */
 export type DetectionType = "ticker" | "name" | "address";
 
+/**
+ * Represents a candidate entity found during page scanning before resolution.
+ */
 export interface DetectedToken {
   text: string;
   type: DetectionType;
@@ -17,6 +23,9 @@ export interface DetectedToken {
 // Chain types
 // ============================================================
 
+/**
+ * Blockchain networks the extension currently knows how to reason about.
+ */
 export type Chain =
   | "ethereum"
   | "arbitrum"
@@ -27,6 +36,9 @@ export type Chain =
   | "solana"
   | "avalanche";
 
+/**
+ * Describes the best chain guess plus alternative candidates from heuristics.
+ */
 export interface ChainDetectionResult {
   chain: Chain;
   confidence: number;
@@ -37,8 +49,14 @@ export interface ChainDetectionResult {
 // Resolution types — what an address/ticker resolves to
 // ============================================================
 
+/**
+ * Distinguishes which profile family a resolver returned.
+ */
 export type ResolutionType = "known_token" | "unknown_token" | "wallet";
 
+/**
+ * Wraps the resolved data returned by the shared resolution pipeline.
+ */
 export interface ResolutionResult {
   type: ResolutionType;
   data: TokenProfile | UnknownTokenProfile | WalletProfile;
@@ -48,6 +66,9 @@ export interface ResolutionResult {
 // Token profile — full analysis for known (indexed) tokens
 // ============================================================
 
+/**
+ * Canonical analysis payload for a known token with indexed market data.
+ */
 export interface TokenProfile {
   // Identity
   id: string;
@@ -90,6 +111,9 @@ export interface TokenProfile {
 // Unknown token profile — for tokens not on CoinGecko
 // ============================================================
 
+/**
+ * Lightweight analysis payload for contracts not found in indexed sources.
+ */
 export interface UnknownTokenProfile {
   contractAddress: string;
   chain: Chain;
@@ -108,6 +132,9 @@ export interface UnknownTokenProfile {
 // Wallet profile — for EOA addresses
 // ============================================================
 
+/**
+ * Summary payload for wallet addresses and their recent on-chain activity.
+ */
 export interface WalletProfile {
   address: string;
   chain: Chain;
@@ -119,6 +146,9 @@ export interface WalletProfile {
   lastUpdated: number;
 }
 
+/**
+ * A single token position within a resolved wallet portfolio.
+ */
 export interface WalletHolding {
   name: string;
   symbol: string;
@@ -128,6 +158,9 @@ export interface WalletHolding {
   logo?: string;
 }
 
+/**
+ * A recent wallet activity entry normalized for UI consumption.
+ */
 export interface WalletTransaction {
   type: "send" | "receive" | "swap" | "approve" | "other";
   token?: string;
@@ -141,8 +174,14 @@ export interface WalletTransaction {
 // Supply data
 // ============================================================
 
+/**
+ * Describes the token-supply regime inferred from external market data.
+ */
 export type SupplyType = "fixed" | "inflationary" | "deflationary" | "rebase";
 
+/**
+ * Supply and valuation metrics used by token scoring and UI summaries.
+ */
 export interface SupplyInfo {
   type: SupplyType;
   circulatingSupply: number;
@@ -159,8 +198,14 @@ export interface SupplyInfo {
 // Unlock / vesting data
 // ============================================================
 
+/**
+ * Classifies how threatening upcoming token unlocks are to circulating supply.
+ */
 export type UnlockPressure = "low" | "medium" | "high" | "critical";
 
+/**
+ * Vesting and unlock metadata used to estimate sell pressure.
+ */
 export interface UnlockInfo {
   nextUnlockDate?: string;
   nextUnlockAmount?: number;
@@ -175,6 +220,9 @@ export interface UnlockInfo {
 // Allocation data
 // ============================================================
 
+/**
+ * Token allocation breakdown for major stakeholder groups.
+ */
 export interface AllocationInfo {
   team: number; // percentage
   investors: number;
@@ -190,6 +238,9 @@ export interface AllocationInfo {
 // Fundamentals data
 // ============================================================
 
+/**
+ * Fundamental protocol metrics used to enrich token analysis.
+ */
 export interface FundamentalsInfo {
   revenueUsd?: number;
   revenueTrend?: "growing" | "flat" | "shrinking";
@@ -203,6 +254,9 @@ export interface FundamentalsInfo {
 // Scoring
 // ============================================================
 
+/**
+ * Human-readable token health score derived from multiple heuristics.
+ */
 export interface TokenScore {
   overall: number; // 1-5
   supply: number; // 1-5
@@ -215,8 +269,14 @@ export interface TokenScore {
 // TGE analysis (for newly launched tokens)
 // ============================================================
 
+/**
+ * Letter grade assigned to a token-generation event assessment.
+ */
 export type TGEGrade = "A" | "B" | "C" | "D" | "F";
 
+/**
+ * Launch-time tokenomics assessment for newly released assets.
+ */
 export interface TGEAnalysis {
   tgeUnlockPercent: number;
   grade: TGEGrade;
@@ -225,6 +285,9 @@ export interface TGEAnalysis {
   comparables: TGEComparable[];
 }
 
+/**
+ * Comparable launch profile used to contextualize a TGE analysis.
+ */
 export interface TGEComparable {
   name: string;
   category: string;
@@ -238,6 +301,9 @@ export interface TGEComparable {
 // RugCheck data
 // ============================================================
 
+/**
+ * A single risk signal returned by RugCheck and normalized for the app.
+ */
 export interface RugCheckRisk {
   name: string;
   level: string;
@@ -246,6 +312,9 @@ export interface RugCheckRisk {
   score?: number;
 }
 
+/**
+ * Lightweight RugCheck summary used for fast Solana risk lookups.
+ */
 export interface RugCheckSummary {
   mint: string;
   score: number;
@@ -256,6 +325,9 @@ export interface RugCheckSummary {
   risks: RugCheckRisk[];
 }
 
+/**
+ * Expanded RugCheck payload used when deeper holder or market context is needed.
+ */
 export interface RugCheckReport extends RugCheckSummary {
   rugged: boolean;
   topHolders: Record<string, unknown>[];
@@ -269,6 +341,9 @@ export interface RugCheckReport extends RugCheckSummary {
 // Settings
 // ============================================================
 
+/**
+ * User-configurable extension settings persisted in local storage.
+ */
 export interface UserSettings {
   detectionEnabled: boolean;
   highlightStyle: "underline" | "background" | "none";
@@ -288,12 +363,18 @@ export interface UserSettings {
 // Cache
 // ============================================================
 
+/**
+ * Envelope stored in cache so values carry their own expiration metadata.
+ */
 export interface CacheEntry<T> {
   data: T;
   timestamp: number;
   ttl: number;
 }
 
+/**
+ * Shared cache durations tuned to the volatility of each data source.
+ */
 export const CACHE_TTL = {
   PRICE: 5 * 60 * 1000, // 5 minutes
   SUPPLY: 60 * 60 * 1000, // 1 hour
@@ -308,6 +389,9 @@ export const CACHE_TTL = {
 // Messages (content script <-> background service worker)
 // ============================================================
 
+/**
+ * Message names exchanged between content scripts and the background worker.
+ */
 export type MessageType =
   | "RESOLVE_TOKEN"
   | "RESOLVE_ADDRESS"
@@ -315,11 +399,17 @@ export type MessageType =
   | "UPDATE_SETTINGS"
   | "SEARCH_TOKEN";
 
+/**
+ * Generic message envelope for extension runtime communication.
+ */
 export interface Message {
   type: MessageType;
   payload: unknown;
 }
 
+/**
+ * Standard success/error response envelope for runtime message handlers.
+ */
 export interface MessageResponse<T = unknown> {
   success: boolean;
   data?: T;

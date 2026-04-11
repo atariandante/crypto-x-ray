@@ -4,12 +4,10 @@ interface RateLimiterConfig {
   baseBackoffMs: number;
 }
 
-interface QueuedRequest<T> {
-  execute: () => Promise<T>;
-  resolve: (value: T) => void;
-  reject: (error: Error) => void;
-}
-
+/**
+ * Identifies each external API so shared rate-limit policy can be configured
+ * in one place instead of being duplicated across clients.
+ */
 export enum ApiName {
   CoinGecko = "coingecko",
   DefiLlama = "defillama",
@@ -52,9 +50,14 @@ const API_CONFIGS: Record<ApiName, RateLimiterConfig> = {
   },
 };
 
+/**
+ * Serializes outbound API calls under per-provider rate and retry policies.
+ * This protects the extension from burst traffic and keeps retry behavior
+ * consistent across all HTTP clients.
+ */
 class RateLimiter {
   private timestamps: number[] = [];
-  private queue: QueuedRequest<unknown>[] = [];
+  private queue: Array<() => Promise<void>> = [];
   private processing = false;
   private config: RateLimiterConfig;
 
@@ -64,10 +67,15 @@ class RateLimiter {
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      this.queue.push({
-        execute: fn as () => Promise<unknown>,
-        resolve: resolve as (value: unknown) => void,
-        reject,
+      this.queue.push(async () => {
+        try {
+          const result = await this.executeWithRetry(fn);
+          resolve(result);
+        } catch (error) {
+          reject(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
       });
       this.processQueue();
     });
@@ -81,15 +89,7 @@ class RateLimiter {
       await this.waitForSlot();
       const request = this.queue.shift();
       if (!request) break;
-
-      try {
-        const result = await this.executeWithRetry(request.execute);
-        request.resolve(result);
-      } catch (error) {
-        request.reject(
-          error instanceof Error ? error : new Error(String(error)),
-        );
-      }
+      await request();
     }
 
     this.processing = false;
@@ -139,6 +139,10 @@ class RateLimiter {
 
 const limiters = new Map<string, RateLimiter>();
 
+/**
+ * Returns a shared rate limiter instance for the requested provider.
+ * Reusing instances lets all callers contribute to the same budget.
+ */
 export function getRateLimiter(apiName: ApiName): RateLimiter {
   if (!limiters.has(apiName)) {
     const config = API_CONFIGS[apiName];

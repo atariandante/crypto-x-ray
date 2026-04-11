@@ -32,12 +32,20 @@ const buttonVariants = cva(
   }
 );
 
+/**
+ * Props accepted by the shared button primitive and its style variants.
+ */
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
+/**
+ * Provides the shared button primitive used by popup, options, and cards.
+ * The wrapper exists so variant styling and `asChild` composition stay
+ * consistent across the extension UI.
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";

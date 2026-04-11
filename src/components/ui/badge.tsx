@@ -22,10 +22,17 @@ const badgeVariants = cva(
   }
 );
 
+/**
+ * Props accepted by the shared badge primitive and its visual variants.
+ */
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof badgeVariants> {}
 
+/**
+ * Renders a styled badge primitive shared across extension surfaces.
+ * Keeping this wrapper centralized prevents variant styling from drifting.
+ */
 function Badge({ className, variant, ...props }: BadgeProps) {
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props} />

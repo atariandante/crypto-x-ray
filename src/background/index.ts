@@ -18,6 +18,41 @@ import type {
 
 console.log("[Crypto X-Ray] Background service worker loaded");
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * Narrows token-resolution payloads received over the extension message bus.
+ */
+function isResolveTokenPayload(
+  payload: unknown,
+): payload is { id: string } {
+  return isRecord(payload) && typeof payload.id === "string";
+}
+
+/**
+ * Narrows address-resolution payloads received over the extension message bus.
+ */
+function isResolveAddressPayload(
+  payload: unknown,
+): payload is { address: string; chain: Chain } {
+  return (
+    isRecord(payload) &&
+    typeof payload.address === "string" &&
+    typeof payload.chain === "string"
+  );
+}
+
+/**
+ * Narrows search payloads received over the extension message bus.
+ */
+function isSearchTokenPayload(
+  payload: unknown,
+): payload is { query: string } {
+  return isRecord(payload) && typeof payload.query === "string";
+}
+
 // ---------- Message handler ----------
 
 chrome.runtime.onMessage.addListener(
@@ -37,15 +72,19 @@ chrome.runtime.onMessage.addListener(
 async function handleMessage(message: Message): Promise<MessageResponse> {
   switch (message.type) {
     case "RESOLVE_TOKEN":
-      return resolveToken(message.payload as { id: string });
+      return isResolveTokenPayload(message.payload)
+        ? resolveToken(message.payload)
+        : { success: false, error: "Invalid RESOLVE_TOKEN payload" };
 
     case "RESOLVE_ADDRESS":
-      return resolveAddress(
-        message.payload as { address: string; chain: Chain },
-      );
+      return isResolveAddressPayload(message.payload)
+        ? resolveAddress(message.payload)
+        : { success: false, error: "Invalid RESOLVE_ADDRESS payload" };
 
     case "SEARCH_TOKEN":
-      return searchToken(message.payload as { query: string });
+      return isSearchTokenPayload(message.payload)
+        ? searchToken(message.payload)
+        : { success: false, error: "Invalid SEARCH_TOKEN payload" };
 
     case "GET_SETTINGS":
     case "UPDATE_SETTINGS":
