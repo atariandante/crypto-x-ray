@@ -5,7 +5,8 @@ const ENS_PATTERN = /\b[a-z0-9-]+\.eth\b/gi;
 const EVM_ADDRESS_PATTERN = /\b0x[a-fA-F0-9]{40}\b/g;
 const SOLANA_ADDRESS_PATTERN = /\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/g;
 const TICKER_PATTERN = /(^|[^A-Za-z0-9])(\$[A-Z]{2,5})(?=$|[^A-Za-z0-9])/g;
-const NAME_CONTEXT_REQUIRED_RANK_THRESHOLD = 25;
+const NAME_CONTEXT_REQUIRED_RANK_THRESHOLD = 20;
+const CONTEXT_SENSITIVE_NAME_MAX_LENGTH = 7;
 const CRYPTO_CONTEXT_WORD_PATTERN =
   "\\b(token|tokens|coin|coins|crypto|blockchain|protocol|wallet|wallets|address|addresses|chain|network|market|markets|price|prices|chart|charts|holder|holders|trader|traders|trading|exchange|exchanges|defi|dex|staking|liquidity|airdrop|listing|supply)\\b";
 const BEFORE_CRYPTO_CONTEXT_PATTERN = new RegExp(
@@ -234,10 +235,14 @@ function isAcceptedNameMatch(
 }
 
 /**
- * Marks lower-ranked, single-word alphabetic names as context-sensitive.
+ * Marks lower-ranked, short single-word alphabetic names as context-sensitive.
  */
 function requiresCryptoContext(name: string, marketCapRank: number): boolean {
-  return marketCapRank > NAME_CONTEXT_REQUIRED_RANK_THRESHOLD && isSingleWordAlphabetic(name);
+  return (
+    marketCapRank > NAME_CONTEXT_REQUIRED_RANK_THRESHOLD &&
+    isSingleWordAlphabetic(name) &&
+    name.length <= CONTEXT_SENSITIVE_NAME_MAX_LENGTH
+  );
 }
 
 /**

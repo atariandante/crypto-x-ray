@@ -123,6 +123,14 @@ describe("scanDocument", () => {
     expect(results.some((token) => token.text.toLowerCase() === "render")).toBe(false);
   });
 
+  it("skips canton in ordinary prose without crypto context", () => {
+    const results = scanDocument(
+      createTextNodes("The delegation visited Canton before continuing the trade mission."),
+    );
+
+    expect(results.some((token) => token.text === "Canton")).toBe(false);
+  });
+
   it("detects ambiguous token names when nearby crypto context disambiguates them", () => {
     const results = scanDocument(
       createTextNodes("Rain token holders tracked the protocol after the exchange listing."),
